@@ -242,7 +242,7 @@ TPZMatrix<STATE> * TPZSymetricSpStructMatrixEigen::SetupMatrixData(TPZStack<int6
 }
 
 
-void TPZSymetricSpStructMatrixEigen::Serial_Assemble(TPZBaseMatrix & stiffnessB, TPZBaseMatrix & rhsB, TPZAutoPointer<TPZGuiInterface> guiInterface) {
+void TPZSymetricSpStructMatrixEigen::Serial_Assemble(TPZBaseMatrix & stiffnessB, TPZBaseMatrix & rhsB) {
     
     
     TPZMatrix<STATE> &stiffness = dynamic_cast<TPZMatrix<STATE>&>(stiffnessB);
@@ -250,10 +250,10 @@ void TPZSymetricSpStructMatrixEigen::Serial_Assemble(TPZBaseMatrix & stiffnessB,
     TPZSYsmpMatrixEigen<STATE> *mat = dynamic_cast<TPZSYsmpMatrixEigen<STATE> *> (&stiffness);
     TPZMatRed<STATE, TPZFMatrix<STATE> > *matRed = dynamic_cast<TPZMatRed<STATE, TPZFMatrix<STATE> > *> (&stiffness);
     if (mat) {
-        Serial_AssembleGlob(stiffness,rhs, guiInterface);
+        Serial_AssembleGlob(stiffness,rhs);
     }
     if (matRed) {
-         Serial_AssembleSub(stiffness,rhs, guiInterface);
+         Serial_AssembleSub(stiffness,rhs);
         
 //        boost::posix_time::ptime timeactual=boost::posix_time::microsec_clock::local_time();
 //        std::cout<<"TotalSolveSub: "<<timetotalSolve<<std::endl;
@@ -271,7 +271,7 @@ void TPZSymetricSpStructMatrixEigen::Serial_Assemble(TPZBaseMatrix & stiffnessB,
     }
     
 }
-void TPZSymetricSpStructMatrixEigen::Serial_AssembleSub(TPZMatrix<STATE> & stiffness, TPZFMatrix<STATE> & rhs, TPZAutoPointer<TPZGuiInterface> guiInterface) {
+void TPZSymetricSpStructMatrixEigen::Serial_AssembleSub(TPZMatrix<STATE> & stiffness, TPZFMatrix<STATE> & rhs) {
     
     TPZMatRed<STATE, TPZFMatrix<STATE> > *matRed = dynamic_cast<TPZMatRed<STATE, TPZFMatrix<STATE> > *> (&stiffness);
 //    matRed->Zero();
@@ -312,9 +312,6 @@ void TPZSymetricSpStructMatrixEigen::Serial_AssembleSub(TPZMatrix<STATE> & stiff
         ek.Reset();
         ef.Reset();
         el->CalcStiff(ek, ef);
-        if (guiInterface) if (guiInterface->AmIKilled()) {
-            return;
-        }
         calcstiff.stop();
       
 //        subcmesh->fTimeTotalCalcStiff += endtimeCalc-initimeCalc;
@@ -465,7 +462,7 @@ void TPZSymetricSpStructMatrixEigen::Serial_AssembleSub(TPZMatrix<STATE> & stiff
 
 
 //
-void  TPZSymetricSpStructMatrixEigen::Serial_AssembleGlob(TPZMatrix<STATE> & stiffness, TPZFMatrix<STATE> & rhs, TPZAutoPointer<TPZGuiInterface> guiInterface) {
+void  TPZSymetricSpStructMatrixEigen::Serial_AssembleGlob(TPZMatrix<STATE> & stiffness, TPZFMatrix<STATE> & rhs) {
     
 
     int64_t iel;
@@ -537,9 +534,6 @@ void  TPZSymetricSpStructMatrixEigen::Serial_AssembleGlob(TPZMatrix<STATE> & sti
 //            
             
             
-            if (guiInterface) if (guiInterface->AmIKilled()) {
-                return;
-            }
             calcstiff.stop();
             assemble.start();
             

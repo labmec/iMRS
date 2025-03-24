@@ -2303,7 +2303,6 @@ void TMRSApproxSpaceGenerator::BuildMixed4SpacesMortarMesh(){
                     //                    int preconditioned =0;
                     //                    TPZAutoPointer<TPZGuiInterface> guiInterface;
                     //                    subcmesh->SetAnalysisSkyline(numThreads, preconditioned, guiInterface);
-                    TPZAutoPointer<TPZGuiInterface> guiInterface;
 //                    subcmesh->SetAnalysisSkyline(0, 0, guiInterface);
                     //                    std::ofstream subcm2("PrintSubm2.txt");
                     //                    subcmesh->Print(subcm2);
@@ -4357,7 +4356,6 @@ void TMRSApproxSpaceGenerator::HideTheElements(TPZCompMesh *cmesh){
     {
         TPZCompEl *cel = cmesh->Element(it.second);
         TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh *>(cel);
-        TPZAutoPointer<TPZGuiInterface> gui;
 
         const int nthreads = mSimData.mTNumerics.m_nThreadsMixedProblem;
         const bool isUseSparse = true;
@@ -4368,7 +4366,7 @@ void TMRSApproxSpaceGenerator::HideTheElements(TPZCompMesh *cmesh){
         else{
             // Skyline does not do pivoting and unfortunately, it is necessary for certain problems.
             // So, using it might lead to zero pivot and therefore it is strongly not recommended.
-            subcmesh->SetAnalysisSkyline(nthreads, 0, gui);
+            subcmesh->SetAnalysisSkyline(nthreads, 0);
         }
     }
     //    GroupandCondenseElements();
