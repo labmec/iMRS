@@ -207,6 +207,7 @@ protected:
         /** @brief Number of entries storaged in the Matrix*/
         virtual int64_t Size() const override{
             DebugStop();
+            return 1;
         }
         /** @{ */
         /** @brief Pointer to the beginning of the storage of the matrix*/
@@ -215,6 +216,7 @@ protected:
         }
         virtual const TVar* Elem() const override{
             DebugStop();
+            return nullptr;
         }
         virtual void CopyFrom(const TPZMatrix<TVar> *mat) override{
             DebugStop();

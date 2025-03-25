@@ -59,6 +59,7 @@ TMRSApproxSpaceGenerator::TMRSApproxSpaceGenerator()
 
 TMRSApproxSpaceGenerator &TMRSApproxSpaceGenerator::operator=(const TMRSApproxSpaceGenerator &other){
     DebugStop();
+    return *this;
 }
 
 // ---------------------------------------------------------------------

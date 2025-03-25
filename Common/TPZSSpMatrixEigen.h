@@ -89,6 +89,7 @@ class TPZSYsmpMatrixEigen : public TPZMatrix<TVar>{
     /** @brief Number of entries storaged in the Matrix*/
     virtual int64_t Size() const{
         DebugStop();
+        return 1;
     }
     
     virtual TVar* &Elem(){
@@ -96,6 +97,7 @@ class TPZSYsmpMatrixEigen : public TPZMatrix<TVar>{
     }
     virtual const TVar* Elem() const{
         DebugStop();
+        return nullptr;
     }
     
     /** @brief Zeroes the matrix */
