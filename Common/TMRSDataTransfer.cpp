@@ -129,6 +129,32 @@ void TMRSDataTransfer::TPetroPhysics::CreateQuadraticKrModel(){
     };
     UpdateLambdasAndFracFlows();
 }
+void TMRSDataTransfer::TPetroPhysics::CreateQuadraticResidualKrModel(){
+    REAL swr = mSwr;
+    REAL sor = mSor;
+    mKrw = [swr](REAL &sw){
+        REAL krw = 0;
+        REAL dkrw = 0;
+        if (sw > swr) {
+            krw = (sw-swr)*(sw-swr)/(1.-swr)*(1.-swr);
+            dkrw = (2*(sw-swr))/((1.-swr)*(1.-swr));
+        }
+        std::tuple<REAL, REAL> valderiv(krw, dkrw);
+        return valderiv;
+    };
+    mKro = [sor](REAL &sw){
+        REAL so = 1-sw;
+        REAL kro = 0;
+        REAL dkro = 0;
+        if (so > sor) {
+            kro = (so-sor)*(so-sor)/(1.-sor)*(1.-sor);
+            dkro = (2*(so-sor))/((1.-sor)*(1.-sor));
+        }
+        std::tuple<REAL, REAL> valderiv(kro, dkro);
+        return valderiv;
+    };
+    UpdateLambdasAndFracFlows();
+}
 
 void TMRSDataTransfer::TPetroPhysics::UpdateLambdasAndFracFlows(){
     mLambdaW = [this](REAL &sw){

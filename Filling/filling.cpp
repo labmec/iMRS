@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/module", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/test-1d", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -361,8 +361,18 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
     if (petro.find("KrModel") == petro.end()) DebugStop();
     if (petro["KrModel"] == 0) {
       sim_data.mTNumerics.m_ISLinearKrModelQ = true;
+      sim_data.mTPetroPhysics.CreateLinearKrModel();
     } else {
       sim_data.mTNumerics.m_ISLinearKrModelQ = false;
+      if (petro["KrModel"] == 1) {
+        sim_data.mTPetroPhysics.CreateQuadraticKrModel();
+      } else {
+        if (petro.find("Swr") == petro.end()) DebugStop();
+        if (petro.find("Sor") == petro.end()) DebugStop();
+        sim_data.mTPetroPhysics.mSwr = petro["Swr"];
+        sim_data.mTPetroPhysics.mSor = petro["Sor"];
+        sim_data.mTPetroPhysics.CreateQuadraticResidualKrModel();
+      }
     }
     sim_data.mTPetroPhysics.mWaterViscosity = sim_data.mTFluidProperties.mWaterViscosity;
     sim_data.mTPetroPhysics.mOilViscosity = sim_data.mTFluidProperties.mOilViscosity;
@@ -422,14 +432,14 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   REAL dt = sim_data.mTNumerics.m_dt;
   TPZStack<REAL, 100> reporting_times;
   REAL time = sim_data.mTPostProcess.m_file_time_step;
-  int n_reporting_times = (n_steps) / (time * 100 / dt) + 1;
+  int n_reporting_times = (n_steps) / (time * 1 / dt) + 1;
   REAL r_time = 0.0;
   int j=1;
   for (int i = 1; i <= n_reporting_times; i++) {
     
     r_time = j * dt * (time / dt);
     reporting_times.push_back(r_time);
-    j+=100;
+    j+=1;
   }
   sim_data.mTPostProcess.m_vec_reporting_times = reporting_times;
 }

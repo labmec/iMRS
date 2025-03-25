@@ -179,6 +179,8 @@ class TMRSDataTransfer : public TMRSSavable {
    public:
     REAL mOilViscosity;
     REAL mWaterViscosity;
+    REAL mSwr; // residual water saturation
+    REAL mSor; // residual oil saturation
 
     /** @brief Contains the water relative permeability model for each layer */
     std::vector<TRSLinearInterpolator> mLayer_Krw_RelPerModel;
@@ -197,6 +199,8 @@ class TMRSDataTransfer : public TMRSSavable {
     TPetroPhysics() {
       mOilViscosity = 1.0;
       mWaterViscosity = 1.0;
+      REAL mSwr = 0.0; 
+      REAL mSor = 0.0;
       CreateLinearKrModel();
       mLayer_Krw_RelPerModel.clear();
       mLayer_Kro_RelPerModel.clear();
@@ -210,6 +214,8 @@ class TMRSDataTransfer : public TMRSSavable {
     TPetroPhysics(const TPetroPhysics &other) {
       mOilViscosity = other.mOilViscosity;
       mWaterViscosity = other.mWaterViscosity;
+      mSwr = other.mSwr;
+      mSor = other.mSor;
       mKro = other.mKro;
       mKrw = other.mKrw;
       mFo = other.mFo;
@@ -227,6 +233,8 @@ class TMRSDataTransfer : public TMRSSavable {
       {
         mOilViscosity = other.mOilViscosity;
         mWaterViscosity = other.mWaterViscosity;
+        mSwr = other.mSwr;
+        mSor = other.mSor;
         mKro = other.mKro;
         mKrw = other.mKrw;
         mFo = other.mFo;
@@ -241,6 +249,7 @@ class TMRSDataTransfer : public TMRSSavable {
     }
     void CreateLinearKrModel();
     void CreateQuadraticKrModel();
+    void CreateQuadraticResidualKrModel();
     void UpdateLambdasAndFracFlows();
   };
 

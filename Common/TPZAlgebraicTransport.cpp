@@ -455,12 +455,13 @@ void TPZAlgebraicTransport::TCellData::SetDataTransfer(TMRSDataTransfer *simdata
 }
 void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(bool isLinearQ){
     
-    if (!isLinearQ) {
-        fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
-    }
-    else{
-        fsim_data->mTPetroPhysics.CreateLinearKrModel();
-    }
+    // Pq eh necessario criar o modelo de permeabilidade aqui novamente?
+    // if (!isLinearQ) { 
+    //     fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
+    // }
+    // else{
+    //     fsim_data->mTPetroPhysics.CreateLinearKrModel();
+    // }
     
     auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW;
     auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO;
