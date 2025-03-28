@@ -390,7 +390,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
             error_rel_transport = Norm(m_x_transport - m_transport_module->Solution())/Norm(m_transport_module->Solution());
         }
 
-        stop_criterion_Q = error_rel_transport < eps_tol; // Stop by saturation variation
+        stop_criterion_Q = m_sim_data->mTNumerics.m_is_linearTrace? true : error_rel_transport < eps_tol; // Stop by saturation variation
         if (stop_criterion_Q && m_k_iteration >= 1) {
             std::cout << "SFI converged " << std::endl;
             std::cout << "Number of iterations = " << m_k_iteration << std::endl;
