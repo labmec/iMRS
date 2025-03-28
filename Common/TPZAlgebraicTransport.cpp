@@ -347,7 +347,12 @@ void TPZAlgebraicTransport::ContributeBCInterface(int index,TPZFMatrix<double> &
     const bool noflux = (fabs(fluxint) < zerotol && type == 1) ? true : false;
     if (fluxint < 0.0 && !noflux){ //inlet
         REAL s_inlet = fboundaryCMatVal[matid].second; //external saturation
-        ef(0,0) = s_inlet*fluxint*fdt;
+        //What is correct: to use the inlet saturation or the fractional flow at the inlet?
+        int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
+        // krmodel = 0; //using the inlet saturation direcly
+        auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
+        REAL fw_inlet = std::get<0>(fwf(s_inlet));
+        ef(0,0) = fw_inlet*fluxint*fdt;
     }
     else if (!noflux){ //outlet
 
@@ -453,21 +458,13 @@ void TPZAlgebraicTransport::TInterfaceDataTransport::Print(std::ostream &out){
 void TPZAlgebraicTransport::TCellData::SetDataTransfer(TMRSDataTransfer *simdata){
     fsim_data = simdata;
 }
-void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(bool isLinearQ){
+void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(int krModel){
     
-    // Pq eh necessario criar o modelo de permeabilidade aqui novamente?
-    // if (!isLinearQ) { 
-    //     fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
-    // }
-    // else{
-    //     fsim_data->mTPetroPhysics.CreateLinearKrModel();
-    // }
-    
-    auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW;
-    auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO;
-    auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal;
-    auto fwf = fsim_data->mTPetroPhysics.mFw;
-    auto fof = fsim_data->mTPetroPhysics.mFo;
+    auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW[krModel];
+    auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO[krModel];
+    auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal[krModel];
+    auto fwf = fsim_data->mTPetroPhysics.mFw[krModel];
+    auto fof = fsim_data->mTPetroPhysics.mFo[krModel];
     
     int nvols = this->fVolume.size();
     for (int ivol =0 ; ivol< nvols; ivol++) {
@@ -493,16 +490,16 @@ void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(bool isLin
 
 void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambdaQuasiNewton(){
     
-        fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
+    //Essa funcao tá estranha, lembrar de checar
+        int krModel = fsim_data->mTPetroPhysics.mKrModel;
         int nvols = this->fVolume.size();
-        auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW;
-        auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO;
-        auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal;
-        auto fwf = fsim_data->mTPetroPhysics.mFw;
-        auto fof = fsim_data->mTPetroPhysics.mFo;
+        auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW[krModel];
+        auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO[krModel];
+        auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal[krModel];
+        auto fwf = fsim_data->mTPetroPhysics.mFw[krModel];
+        auto fof = fsim_data->mTPetroPhysics.mFo[krModel];
     
-        fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
-        auto fwLinearf =fsim_data->mTPetroPhysics.mFo;
+        auto fwLinearf =fsim_data->mTPetroPhysics.mFo[0]; //linear krmodel
     
         for (int ivol =0 ; ivol< nvols; ivol++) {
             REAL sw = this->fSaturation[ivol];
@@ -661,14 +658,19 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
                 fluxIntegratedNoFlux += int_saturation*fluxint*fdt;
             }
             else if (fluxint < 0.0) { //inlet
-                REAL ext_saturation = fboundaryCMatVal[matid].second;
-                fluxIntegratedInlet += ext_saturation*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
+                REAL s_inlet = fboundaryCMatVal[matid].second;
+                int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
+                // krmodel = 0; //using the inlet saturation direcly
+                auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
+                REAL fw_inlet = std::get<0>(fwf(s_inlet));
+                fluxIntegratedInlet += fw_inlet*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
             }
             else { //outlet
                 std::pair<int64_t, int64_t> left_right = fInterfaceData[matid].fLeftRightVolIndex[i];
                 int64_t cell_id = left_right.first;
                 REAL int_saturation = fCellsData.fSaturation[cell_id];
-                fluxIntegratedOutlet += int_saturation*fluxint*fdt;
+                REAL fwL = fCellsData.fWaterfractionalflow[cell_id];
+                fluxIntegratedOutlet += fwL*fluxint*fdt;
             }
         }
     }

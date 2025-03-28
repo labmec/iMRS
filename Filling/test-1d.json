@@ -54,7 +54,7 @@
         {
             "RunWithTransport": true,
             "DeltaT": 0.01,
-            "NSteps": 300,
+            "NSteps": 350,
             "Gravity": [0.0, 0.0, 0.0],
             "IsLinearTrace": true
         },
@@ -70,7 +70,7 @@
     },
     "PetroPhysics":
     {
-        "KrModel": 0, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
+        "KrModel": 2, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
         "Swr": 0.2, // Residual water saturation
         "Sor": 0.2 // Residual oil saturation
     }

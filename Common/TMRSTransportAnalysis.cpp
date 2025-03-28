@@ -217,7 +217,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
 
     //Linear problem Benchmark
    
-    if(Norm(Rhs()) < 1.0e-4){
+    if(Norm(Rhs()) < res_tol){
         std::cout << "Transport operator: Converged - (InitialGuess)" << std::endl;
         std::cout << "Number of iterations = " << 1 << std::endl;
         std::cout << "residue norm = " << Norm(Rhs()) << std::endl;
@@ -235,7 +235,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
 //        cmesh->LoadSolutionFromMultiPhysics();
 //        PostProcessTimeStep();
         fAlgebraicTransport.fCellsData.UpdateSaturations(x);
-        fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTNumerics.m_ISLinearKrModelQ);
+        fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     
         AssembleResidual();
         corr_norm = Norm(dx);
@@ -260,7 +260,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
         }
 
     }
-    
+    if (!stop_criterion_Q && !stop_criterion_corr_Q) DebugStop(); //failed to converge
 }
 
 void TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
@@ -272,7 +272,7 @@ void TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
     }
     
     fAlgebraicTransport.fCellsData.UpdateSaturations(x);
-    fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(true);
+    fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     
     LoadSolution(x);
     if(cmesh){
@@ -296,7 +296,7 @@ void TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
         cmesh2->LoadSolution(x);
     }
     fAlgebraicTransport.fCellsData.UpdateSaturations(x);
-    fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(true);
+    fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     AssembleResidual();
     REAL res_norm = Norm(Rhs());
     std::cout << "Initial guess residue norm : " <<  res_norm << std::endl;
@@ -329,9 +329,9 @@ bool TMRSTransportAnalysis::QuasiNewtonSteps(TPZFMatrix<STATE> &x, int n){
         cmesh->LoadSolutionFromMultiPhysics();
         
         
-        if (m_sim_data->mTNumerics.m_ISLinearKrModelQ) {
+        if (m_sim_data->mTPetroPhysics.mKrModel == 0) {
             fAlgebraicTransport.fCellsData.UpdateSaturations(x);
-            fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(true);
+            fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(0);
         }else{
             fAlgebraicTransport.fCellsData.UpdateSaturations(x);
             fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambdaQuasiNewton();
@@ -661,7 +661,7 @@ void TMRSTransportAnalysis::UpdateInitialSolutionFromCellsData(){
         DebugStop();
     }
     fAlgebraicTransport.fCellsData.UpdateSaturationsTo(Solution());
-    fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTNumerics.m_ISLinearKrModelQ);
+    fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     LoadSolution();
     //REVISAR JOSE EN EL CASO DE NO MULTIFISICO
 //    cmesh->LoadSolutionFromMultiPhysics();

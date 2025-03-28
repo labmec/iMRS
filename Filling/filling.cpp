@@ -217,7 +217,7 @@ TPZGeoMesh* ReadMeshFromGmsh(TMRSDataTransfer& sim_data) {
   string file_name = std::string(FRACMESHES) + "/../Filling/" + sim_data.mTGeometry.mGmeshFileName;
   {
     TPZGmshReader reader;
-    TPZManVector<std::map<std::string, int>, 4> stringtoint(5);
+    TPZManVector<std::map<std::string, int>, 4> stringtoint(4);
     stringtoint[2]["dom"] = sim_data.mTGeometry.mDomainNameAndMatId["dom"];
 
     stringtoint[1]["bcl"] = sim_data.mTBoundaryConditions.mDomainNameAndMatId["bcl"];
@@ -359,20 +359,13 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   if (input.find("PetroPhysics") != input.end()) {
     auto petro = input["PetroPhysics"];
     if (petro.find("KrModel") == petro.end()) DebugStop();
-    if (petro["KrModel"] == 0) {
-      sim_data.mTNumerics.m_ISLinearKrModelQ = true;
-      sim_data.mTPetroPhysics.CreateLinearKrModel();
-    } else {
-      sim_data.mTNumerics.m_ISLinearKrModelQ = false;
-      if (petro["KrModel"] == 1) {
-        sim_data.mTPetroPhysics.CreateQuadraticKrModel();
-      } else {
+    sim_data.mTPetroPhysics.mKrModel = petro["KrModel"];
+    if (petro["KrModel"] == 2) {
         if (petro.find("Swr") == petro.end()) DebugStop();
         if (petro.find("Sor") == petro.end()) DebugStop();
         sim_data.mTPetroPhysics.mSwr = petro["Swr"];
         sim_data.mTPetroPhysics.mSor = petro["Sor"];
-        sim_data.mTPetroPhysics.CreateQuadraticResidualKrModel();
-      }
+        sim_data.mTPetroPhysics.CreateQuadraticResidualKrModel(); //It is necessary to call this method after the residual saturations are set
     }
     sim_data.mTPetroPhysics.mWaterViscosity = sim_data.mTFluidProperties.mWaterViscosity;
     sim_data.mTPetroPhysics.mOilViscosity = sim_data.mTFluidProperties.mOilViscosity;
