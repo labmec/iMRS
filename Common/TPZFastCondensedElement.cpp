@@ -65,7 +65,7 @@ void TPZFastCondensedElement::CalcStiff(TPZElementMatrixT<STATE> &ek,TPZElementM
         ek.fMat(irow,ncols-1) *= fLambda;
     }
     ek.fMat(nrows-1,ncols-1) *=fLambda;
-    // ek.fMat(nrows-1,ncols-1) *=fCompressibilityMatrixTerm;
+    ek.fMat(nrows-1,ncols-1) = fCompressibilityMatrixTerm;
     
     TPZFNMatrix<30,STATE> solvec(fEK.fMat.Rows(),1,0.);
     GetSolutionVector(solvec);
