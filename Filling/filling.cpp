@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/test-1d", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/test-1d-vacuum", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -352,6 +352,9 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
       sim_data.mTFluidProperties.CreateLinearDensityFunction();
     } else {
       sim_data.mTFluidProperties.CreateExponentialDensityFunction();
+    }
+    if (properties.find("ReferencePressure") != properties.end()) {
+      sim_data.mTFluidProperties.mReferencePressure = properties["ReferencePressure"];
     }
   }
 
