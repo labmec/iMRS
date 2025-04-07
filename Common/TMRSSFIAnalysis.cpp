@@ -205,6 +205,11 @@ void TMRSSFIAnalysis::FillProperties(){
                 REAL phi = m_transport_module->fAlgebraicTransport.fCellsData.fporosity[icell];
                 REAL vol = m_transport_module->fAlgebraicTransport.fCellsData.fVolume[icell];
                 m_transport_module->fAlgebraicTransport.initialMass += sat * phi * vol;
+
+                REAL kappa = m_sim_data->mTReservoirProperties.m_permeabilitiesbyId[matid]; //if no permeability function is set, all cells must have the same value (for IHU)
+                m_transport_module->fAlgebraicTransport.fCellsData.fKx[icell] = kappa;
+                m_transport_module->fAlgebraicTransport.fCellsData.fKy[icell] = kappa;
+                m_transport_module->fAlgebraicTransport.fCellsData.fKz[icell] = kappa;
                 
                 if (!fountmat){
                     DebugStop();
@@ -453,7 +458,7 @@ void TMRSSFIAnalysis::SFIIteration(){
         }
     }
     fAlgebraicDataTransfer.TransferPressures();
-    m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
+    // m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
     
     std::cout << "Running transport problem now..." << std::endl;
     // Solves the transport problem

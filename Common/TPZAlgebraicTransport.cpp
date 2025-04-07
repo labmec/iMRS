@@ -108,7 +108,7 @@ void TPZAlgebraicTransport::ContributeInterface(int index, TPZFMatrix<double> &e
     ek(1,1) = -1.0*dfwSw_R * (1-beta)*fluxint* fdt;
    
 //    Gravity fluxes contribution
-//    ContributeInterfaceIHU(index, ek, ef);
+   ContributeInterfaceIHU(index, ek, ef);
 }
 
 void TPZAlgebraicTransport::ContributeInterfaceResidual(int index, TPZFMatrix<double> &ef, int interfaceID){
@@ -129,7 +129,7 @@ void TPZAlgebraicTransport::ContributeInterfaceResidual(int index, TPZFMatrix<do
     ef(1) = -1.0*(beta*fw_L  + (1-beta)*fw_R)*fluxint* fdt;
     
 // Gravity fluxes contribution
-//    ContributeInterfaceIHUResidual(index, ef);
+   ContributeInterfaceIHUResidual(index, ef);
     
 #ifdef PZDEBUG
     if(std::isnan(Norm(ef)))
@@ -204,10 +204,10 @@ void TPZAlgebraicTransport::ContributeInterfaceIHU(int index, TPZFMatrix<double>
     REAL K_z = 2.0*(Kz_L * Kz_R)/(Kz_L + Kz_R);
     
     // Beacuse we assume diagonal abs. perm tensor
-    REAL K_times_g_dot_n = (K_x*n[0]*fgravity[0]+K_y*n[1]*fgravity[1]+K_z*n[2]*fgravity[2]);
+    REAL K_times_g_dot_n = (K_x * n[0] * fgravity[0] + K_y * n[1] * fgravity[1] + K_z * n[2] * fgravity[2]);
     
-    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL);
-    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR);
+    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
+    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
     ef(0) += res1;
     ef(1) -= res2;
     
@@ -216,11 +216,11 @@ void TPZAlgebraicTransport::ContributeInterfaceIHU(int index, TPZFMatrix<double>
     REAL dGRdSL = fstarR.second.first * (lamba_w_starR.first + lamba_o_starR.first) + fstarR.first * (lamba_w_starR.second.first + lamba_o_starR.second.first);
     REAL dGRdSR = fstarR.second.second * (lamba_w_starR.first + lamba_o_starR.first) + fstarR.first * (lamba_w_starR.second.second + lamba_o_starR.second.second);
     
-    ek(0,0) += dGLdSL * K_times_g_dot_n * (rho_wL - rho_oL);
-    ek(0,1) += dGLdSR * K_times_g_dot_n * (rho_wL - rho_oL);
+    ek(0,0) += dGLdSL * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
+    ek(0,1) += dGLdSR * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
     
-    ek(1,1) -= dGRdSL * K_times_g_dot_n * (rho_wR - rho_oR);
-    ek(1,0) -= dGRdSR * K_times_g_dot_n * (rho_wR - rho_oR);
+    ek(1,1) -= dGRdSL * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
+    ek(1,0) -= dGRdSR * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
 }
 
 void TPZAlgebraicTransport::ContributeInterfaceIHUResidual(int index, TPZFMatrix<double> &ef){
@@ -290,8 +290,8 @@ void TPZAlgebraicTransport::ContributeInterfaceIHUResidual(int index, TPZFMatrix
     // Beacuse we assume diagonal abs. perm tensor
     REAL K_times_g_dot_n = (K_x*n[0]*fgravity[0]+K_y*n[1]*fgravity[1]+K_z*n[2]*fgravity[2]);
     
-    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL);
-    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR);
+    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
+    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
     ef(0) += res1;
     ef(1) -= res2;
 
