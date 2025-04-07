@@ -33,7 +33,7 @@
             "name": "lid",
             "matid": 4,
             "type": 0, // imposed pressure
-            "value": -9.33257e3, // [mPa]
+            "value": -9.33257e7, // [mPa]
             "functionID": 0,
             "ExternalSaturation": 1.0,
             "SaturationFunctionID": 0
@@ -52,8 +52,8 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.01,
-            "NSteps": 350,
+            "DeltaT": 0.00000000025,
+            "NSteps": 1000,
             "Gravity": [0.0, -9810.0, 0.0], // [mm/s^2]
             "IsLinearTrace": false
         },
@@ -64,13 +64,13 @@
         "WaterCompressibility": 0.0,
         "OilDensity": 1.225e-9, //[kg/mm^3]
         "OilViscosity": 0.01837, // cP
-        "OilCompressibility": 1.168e-11, // IMPORTANT need to check this value
+        "OilCompressibility": 1.01325e-8, // [mPa^-1]
         "DensityModel": 0, // 0: Linear, 1: Exponential
         "ReferencePressure": 0.0 // [mPa] atmosphere pressure
     },
     "PetroPhysics":
     {
-        "KrModel": 2, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
+        "KrModel": 0, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
         "Swr": 0.2, // Residual water saturation
         "Sor": 0.2 // Residual oil saturation
     },
@@ -79,7 +79,7 @@
         "s0":
         {
             "functionType": 0,
-            "value": 0.8
+            "value": 0.0
         }
     }
 }
