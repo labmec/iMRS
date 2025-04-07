@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/test-1d-vacuum", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/test-gravity-segregation", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
   TPZMultiphysicsCompMesh* mp_cmesh = aspace.GetMixedOperator();  
 
   // =========> Create Analysis
-  RenumType renumtype = RenumType::EDefault;
+  RenumType renumtype = RenumType::EMetis;
   bool UsingPzSparse = true;  // Necessary to use multithread for now...
   bool UsePardiso_Q = true;   // lighting fast!
   cout << "\n---------------------- Creating Analysis (Might optimize bandwidth) ----------------------" << endl;

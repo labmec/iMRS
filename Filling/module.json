@@ -23,7 +23,7 @@
         {
             "name": "diffusor",
             "matid": 3,
-            "type": 0,  // imposed flux
+            "type": 1,  // imposed flux
             "value": 0.0,
             "functionID": 0,
             "ExternalSaturation": 0.0,
@@ -50,7 +50,7 @@
         {
             "name": "gap",
             "matid": 4,
-            "type": 1, // imposed pressure
+            "type": 0, // imposed pressure
             "value": 0.0,
             "functionID": 0,
             "ExternalSaturation": 0.0,
@@ -63,7 +63,7 @@
         {
             "RunWithTransport": true,
             "DeltaT": 0.025,
-            "NSteps": 50000,
+            "NSteps": 80000,
             "Gravity": [0.0, -9810.0, 0.0],
             "IsLinearTrace": false,
             "IsAxisymmetric": false
@@ -72,15 +72,17 @@
     {
         "WaterDensity": 1.0e-6,
         "WaterViscosity": 1.0,
-        "WaterCompressibility": 4.4e-10,
+        "WaterCompressibility": 0,
         "OilDensity": 1.225e-9,
         "OilViscosity": 0.01837,
-        "OilCompressibility": 4.4e-10,
+        "OilCompressibility": 0,
         "DensityModel": 0 // 0: Linear, 1: Exponential
     },
     "PetroPhysics":
     {
-        "KrModel": 0 // 0: Linear, 1: Quadratic
+        "KrModel": 2, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
+        "Swr": 0.2, // Residual water saturation
+        "Sor": 0.2 // Residual oil saturation
     },
     "ReservoirProperties":
     {
