@@ -648,7 +648,7 @@ void TMRSTransportAnalysis::PostProcessTimeStep(){
         elData[indexGeo]=sat;
     }
     
-    std::string fileAdjusted = file.substr(0,file.find(".vtk")) + std::to_string(fpostprocessindex) + ".vtk";
+    std::string fileAdjusted = file.substr(0,file.find("vtk")) + std::to_string(fpostprocessindex) + ".vtk";
     std::ofstream file_ofstream(fileAdjusted);
     TPZVTKGeoMesh::PrintGMeshVTK(fCompMesh->Reference(), file_ofstream, elData);
     fpostprocessindex++;
