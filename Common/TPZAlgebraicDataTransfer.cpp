@@ -1295,8 +1295,18 @@ void TPZAlgebraicDataTransfer::InitializeTransportDataStructure(TPZAlgebraicTran
         REAL volume = gel->Volume();
         if (transport.fCellsData.fsim_data->mTNumerics.m_is_axisymmetric)
         {
-            REAL r = transport.fCellsData.fCenterCoordinate[i][0]; //checar se é isso mesmo?
-            volume *= (2.0*M_PI*r);
+            int ncorner = gel->NCornerNodes();
+            REAL rmin = std::numeric_limits<REAL>::max();
+            REAL rmax = std::numeric_limits<REAL>::min();
+            for (int ic=0; ic<ncorner; ic++)
+            {
+                REAL x = gel->NodePtr(ic)->Coord(0);
+                if (fabs(x) < rmin) rmin = x;
+                if (fabs(x) > rmax) rmax = x;
+            }
+            if (rmin*rmax < 0.0) DebugStop();   
+            REAL h = volume / (rmax - rmin);
+            volume = h * M_PI * (rmax * rmax - rmin * rmin);
         }
         int side = gel->NSides()-1;
         transport.fCellsData.fVolume[i]=volume;
