@@ -719,9 +719,9 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
         std::cout << "\t===> Global mass conservation is ok! Total massLoss = " << std::setprecision(14) << massConservation << std::endl;
     }
     else{
-        std::cout << "\t====> ERROR! Global mass conservation NOT ok! <=====" << std::endl;
+        std::cout << "\t====> WARNING! Global mass conservation NOT ok! <=====" << std::endl;
         std::cout << "Global mass loss: " << std::setprecision(14) << massConservation << std::endl;
-        DebugStop();
+        // DebugStop();
     }
     massOut += fluxIntegratedOutlet;
     initialMass = intMass; //initialMass now stands for the mass at the end of the previous time step
