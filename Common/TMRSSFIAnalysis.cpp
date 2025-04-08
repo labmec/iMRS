@@ -444,15 +444,16 @@ void TMRSSFIAnalysis::SFIIteration(){
     
 
     TPZSimpleTimer timer_sfi("Timer SFI Iteration");
+    m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
+    
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
-
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateMixedDensity();
     fAlgebraicDataTransfer.TransferLambdaCoefficients();
 
     if(shouldSolveDarcy){
         m_mixed_module->RunTimeStep(); // Newton iterations for mixed problem are done here till convergence
         VerifyElementFluxes();
-        UpdateAllFluxInterfaces();
+        // UpdateAllFluxInterfaces();
         if (m_sim_data->mTNumerics.m_is_linearTrace) {
             shouldSolveDarcy = false;
         }
@@ -462,7 +463,7 @@ void TMRSSFIAnalysis::SFIIteration(){
     
     std::cout << "Running transport problem now..." << std::endl;
     // Solves the transport problem
-    m_transport_module->RunTimeStep();
+    //m_transport_module->RunTimeStep();
     
     std::cout << "\n ==> Total SFIIteration time: " << timer_sfi.ReturnTimeDouble()/1000 << " seconds" << std::endl;
     

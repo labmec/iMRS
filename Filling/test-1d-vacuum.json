@@ -52,9 +52,9 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.00000000025,
+            "DeltaT": 0.0000000025,
             "NSteps": 1000,
-            "Gravity": [0.0, -9810.0, 0.0], // [mm/s^2]
+            "Gravity": [0.0, 0.0, 0.0], // [mm/s^2]
             "IsLinearTrace": false
         },
     "FluidProperties":

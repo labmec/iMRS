@@ -42,6 +42,6 @@ Transfinite Surface {1} = {1,3,4,6};
 //+
 Transfinite Curve {1,3} = 2 Using Progression 1;
 //+
-Transfinite Curve {2,4} = 11 Using Progression 1;
+Transfinite Curve {2,4} = 2 Using Progression 1;
 //+
 Recombine Surface {1};

@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/radial-filtration", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/test-1d-vacuum", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -428,14 +428,14 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   REAL dt = sim_data.mTNumerics.m_dt;
   TPZStack<REAL, 100> reporting_times;
   REAL time = sim_data.mTPostProcess.m_file_time_step;
-  int n_reporting_times = (n_steps) / (time * 100 / dt) + 1;
+  int n_reporting_times = (n_steps) / (time * 1 / dt) + 1;
   REAL r_time = 0.0;
   int j=1;
   for (int i = 1; i <= n_reporting_times; i++) {
     
     r_time = j * dt * (time / dt);
     reporting_times.push_back(r_time);
-    j+=100;
+    j+=1;
   }
   sim_data.mTPostProcess.m_vec_reporting_times = reporting_times;
 }
