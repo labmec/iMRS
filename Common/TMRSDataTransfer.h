@@ -190,11 +190,11 @@ class TMRSDataTransfer : public TMRSSavable {
 
     std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mKro;
     std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mKrw;
-    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mFo;
-    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mFw;
-    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mLambdaW;
-    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mLambdaO;
-    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mLambdaTotal;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &, REAL &)>> mFo;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &, REAL &)>> mFw;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &)>> mLambdaW;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &)>> mLambdaO;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &, REAL &)>> mLambdaTotal;
 
     /** @brief Default constructor */
     TPetroPhysics() {

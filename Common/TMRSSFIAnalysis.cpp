@@ -217,6 +217,8 @@ void TMRSSFIAnalysis::FillProperties(){
 //
                 
             }
+            m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState();
+            m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
             
             m_transport_module->fAlgebraicTransport.fdt = m_sim_data->mTNumerics.m_dt;
             bool foundinlet = false;
@@ -377,7 +379,6 @@ void TMRSSFIAnalysis::RunTimeStep(){
     m_x_mixed = m_mixed_module->Solution();
     m_x_transport = m_transport_module->Solution();
     
-    
     int n_iterations = m_sim_data->mTNumerics.m_max_iter_sfi;
     REAL eps_tol = m_sim_data->mTNumerics.m_sfi_tol;
     bool stop_criterion_Q = false;
@@ -402,6 +403,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
 //            std::cout << "Mixed problem variation = " << error_rel_mixed << std::endl;
 //            std::cout << "Transport problem variation = " << error_rel_transport << std::endl;
             m_transport_module->fAlgebraicTransport.fCellsData.fSaturationLastState = m_transport_module->fAlgebraicTransport.fCellsData.fSaturation;
+            m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState(); //this should be called only once per time step
             break;
         }
      
@@ -444,7 +446,6 @@ void TMRSSFIAnalysis::SFIIteration(){
     
 
     TPZSimpleTimer timer_sfi("Timer SFI Iteration");
-    m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
     
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateMixedDensity();
@@ -459,7 +460,7 @@ void TMRSSFIAnalysis::SFIIteration(){
         }
     }
     fAlgebraicDataTransfer.TransferPressures();
-    // m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
+    m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
     
     std::cout << "Running transport problem now..." << std::endl;
     // Solves the transport problem

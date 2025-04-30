@@ -1501,13 +1501,17 @@ void TPZAlgebraicDataTransfer::TransferLambdaCoefficients()
            REAL so = 1-sw;
            REAL drhoWdp = meshit.fTransport->fCellsData.fdDensityWaterdp[cellindex];
            REAL drhoOdp = meshit.fTransport->fCellsData.fdDensityOildp[cellindex];
-           REAL compterm = (porosity/dt)*((sw*drhoWdp)+(so*drhoOdp));
+           REAL compterm = -(porosity/dt)*((sw*drhoWdp)+(so*drhoOdp)); //negative sign in accordance with the lyx 
 
            REAL swlast =meshit.fTransport->fCellsData.fSaturationLastState[cellindex];
            REAL solast = 1.0 - swlast;
+           REAL rhoW = meshit.fTransport->fCellsData.fDensityWater[cellindex];
+           REAL rhoO = meshit.fTransport->fCellsData.fDensityOil[cellindex];
            REAL rhoWlast =meshit.fTransport->fCellsData.fDensityWaterLastState[cellindex];
            REAL rhoOlast =meshit.fTransport->fCellsData.fDensityOilLastState[cellindex];
-           REAL comptermrhs = (porosity/dt)*((swlast*rhoWlast)+(solast*rhoOlast));
+           REAL termrhscurrent = (sw*rhoW)+(so*rhoO);
+           REAL termrhslast = (swlast*rhoWlast)+(solast*rhoOlast);
+           REAL comptermrhs = (porosity/dt)*(termrhscurrent-termrhslast);
 
            condensed->SetCompressibiilityTerm(compterm, comptermrhs);
        }

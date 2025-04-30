@@ -343,6 +343,8 @@ void TPZAlgebraicTransport::ContributeBCInterface(int index,TPZFMatrix<double> &
 
     REAL fluxint = fInterfaceData[matid].fIntegralFlux[index];
     REAL zerotol = 1.e-10;
+    REAL rhoWRef = fCellsData.fsim_data->mTFluidProperties.mWaterDensityRef;
+    REAL rhoORef = fCellsData.fsim_data->mTFluidProperties.mOilDensityRef;
     int type = fboundaryCMatVal[matid].first;
     const bool noflux = (fabs(fluxint) < zerotol && type == 1) ? true : false;
     if (fluxint < 0.0 && !noflux){ //inlet
@@ -351,7 +353,7 @@ void TPZAlgebraicTransport::ContributeBCInterface(int index,TPZFMatrix<double> &
         int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
         // krmodel = 0; //using the inlet saturation direcly
         auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
-        REAL fw_inlet = std::get<0>(fwf(s_inlet));
+        REAL fw_inlet = std::get<0>(fwf(s_inlet, rhoWRef, rhoORef));
         ef(0,0) = fw_inlet*fluxint*fdt;
     }
     else if (!noflux){ //outlet
@@ -470,11 +472,13 @@ void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(int krMode
     for (int ivol =0 ; ivol< nvols; ivol++) {
 
         REAL sw = this->fSaturation[ivol];
-        auto fwfvalderiv = fwf(sw);
-        auto fovalderiv  = fof(sw);
-        auto lambdaWvalderiv = labdaWf(sw);
-        auto lambdaOvalderiv = labdaOf(sw);
-        auto lambdaTotalvalderiv = lambdaTotalf(sw);
+        REAL rhow = this->fDensityWater[ivol];
+        REAL rhoo = this->fDensityOil[ivol];
+        auto fwfvalderiv = fwf(sw, rhow, rhoo);
+        auto fovalderiv  = fof(sw, rhow, rhoo);
+        auto lambdaWvalderiv = labdaWf(sw, rhow);
+        auto lambdaOvalderiv = labdaOf(sw, rhoo);
+        auto lambdaTotalvalderiv = lambdaTotalf(sw, rhow, rhoo);
         
         this->fWaterfractionalflow[ivol] = std::get<0>(fwfvalderiv);
         this->fDerivativeWfractionalflow[ivol] = std::get<1>(fwfvalderiv);
@@ -503,12 +507,14 @@ void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambdaQuasiNewton
     
         for (int ivol =0 ; ivol< nvols; ivol++) {
             REAL sw = this->fSaturation[ivol];
-            auto fwfvalderiv = fwf(sw);
-            auto fwflinearvalderiv = fwLinearf(sw);
-            auto fovalderiv  = fof(sw);
-            auto lambdaWvalderiv = labdaWf(sw);
-            auto lambdaOvalderiv = labdaOf(sw);
-            auto lambdaTotalvalderiv = lambdaTotalf(sw);
+            REAL rhow = this->fDensityWater[ivol];
+            REAL rhoo = this->fDensityOil[ivol];
+            auto fwfvalderiv = fwf(sw, rhow, rhoo);
+            auto fwflinearvalderiv = fwLinearf(sw, rhow, rhoo);
+            auto fovalderiv  = fof(sw, rhow, rhoo);
+            auto lambdaWvalderiv = labdaWf(sw, rhow);
+            auto lambdaOvalderiv = labdaOf(sw, rhoo);
+            auto lambdaTotalvalderiv = lambdaTotalf(sw, rhow, rhoo);
             this->fWaterfractionalflow[ivol] = std::get<0>(fwfvalderiv);
             this->fOilfractionalflow[ivol] = std::get<0>(fovalderiv);
             this->fDerivativeOfractionalflow[ivol] = std::get<1>(fovalderiv);
@@ -553,7 +559,6 @@ void TPZAlgebraicTransport::TCellData::UpdateMixedDensity(){
     }
 }
 void TPZAlgebraicTransport::TCellData::UpdateDensities(){
-    UpdateDensitiesLastState();
     int ncells = fVolume.size();
     auto fWaterDensityF = fsim_data->mTFluidProperties.mWaterDensityF;
     auto fOilDensityF = fsim_data->mTFluidProperties.mOilDensityF;
@@ -659,10 +664,12 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
             }
             else if (fluxint < 0.0) { //inlet
                 REAL s_inlet = fboundaryCMatVal[matid].second;
+                REAL rhoWRef = fCellsData.fsim_data->mTFluidProperties.mWaterDensityRef;
+                REAL rhoORef = fCellsData.fsim_data->mTFluidProperties.mOilDensityRef;
                 int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
                 // krmodel = 0; //using the inlet saturation direcly
                 auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
-                REAL fw_inlet = std::get<0>(fwf(s_inlet));
+                REAL fw_inlet = std::get<0>(fwf(s_inlet, rhoWRef, rhoORef));
                 fluxIntegratedInlet += fw_inlet*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
             }
             else { //outlet

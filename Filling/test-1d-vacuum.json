@@ -5,7 +5,7 @@
     {
         "name": "dom",
         "dimension": 2,
-        "matid":1,
+        "matid": 1,
         "K": 4.93462e-7, // [mm^2]
         "phi": 0.3
     }
@@ -52,7 +52,7 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.0000000025,
+            "DeltaT": 0.0000025,
             "NSteps": 1000,
             "Gravity": [0.0, 0.0, 0.0], // [mm/s^2]
             "IsLinearTrace": false

@@ -158,28 +158,28 @@ void TMRSDataTransfer::TPetroPhysics::CreateQuadraticResidualKrModel(){
 }
 
 void TMRSDataTransfer::TPetroPhysics::UpdateLambdasAndFracFlows(int krModel){
-    mLambdaW[krModel] = [this,krModel](REAL &sw){
+    mLambdaW[krModel] = [this,krModel](REAL &sw, REAL& rhow){
         std::tuple<REAL, REAL> krwvalderiv = mKrw[krModel](sw);
         auto krw = std::get<0>(krwvalderiv);
         REAL dkrw = std::get<1>(krwvalderiv);
-        REAL lambdaw = krw/mWaterViscosity;
-        REAL dlambdadsw = dkrw/mWaterViscosity;
+        REAL lambdaw = krw/mWaterViscosity*rhow;
+        REAL dlambdadsw = dkrw/mWaterViscosity*rhow;
         std::tuple<REAL, REAL> valderiv(lambdaw, dlambdadsw);
         return valderiv;
     };
-    mLambdaO[krModel] = [this,krModel](REAL &sw){
+    mLambdaO[krModel] = [this,krModel](REAL &sw, REAL rhoo){
         std::tuple<REAL, REAL> krwvalderiv = mKro[krModel](sw);
         auto kro = std::get<0>(krwvalderiv);
         REAL dkro = std::get<1>(krwvalderiv);
-        REAL lambdao = kro/mOilViscosity;
-        REAL dlambdadso = dkro/mOilViscosity;
+        REAL lambdao = kro/mOilViscosity*rhoo;
+        REAL dlambdadso = dkro/mOilViscosity*rhoo;
         std::tuple<REAL, REAL> valderiv(lambdao, dlambdadso);
         return valderiv;
     };
     
-    mLambdaTotal[krModel] = [this,krModel](REAL &sw){
-        std::tuple<REAL, REAL> lambdaWvalderiv = mLambdaW[krModel](sw);
-        std::tuple<REAL, REAL> lambdaOvalderiv = mLambdaO[krModel](sw);
+    mLambdaTotal[krModel] = [this,krModel](REAL &sw, REAL &rhow, REAL &rhoo){
+        std::tuple<REAL, REAL> lambdaWvalderiv = mLambdaW[krModel](sw, rhow);
+        std::tuple<REAL, REAL> lambdaOvalderiv = mLambdaO[krModel](sw, rhoo);
         REAL lw = std::get<0>(lambdaWvalderiv);
         REAL dlwdsw = std::get<1>(lambdaWvalderiv);
         REAL lo = std::get<0>(lambdaOvalderiv);
@@ -189,9 +189,9 @@ void TMRSDataTransfer::TPetroPhysics::UpdateLambdasAndFracFlows(int krModel){
         std::tuple<REAL, REAL> valderiv(lambdaTotal, dlambdaTotaldsw);
         return valderiv;
     };
-    mFw[krModel] = [this,krModel](REAL &sw){
-        std::tuple<REAL, REAL> lambdaWvalderiv = mLambdaW[krModel](sw);
-        std::tuple<REAL, REAL> lambdaTotalvalderiv = mLambdaTotal[krModel](sw);
+    mFw[krModel] = [this,krModel](REAL &sw, REAL &rhow, REAL& rhoo){
+        std::tuple<REAL, REAL> lambdaWvalderiv = mLambdaW[krModel](sw, rhow);
+        std::tuple<REAL, REAL> lambdaTotalvalderiv = mLambdaTotal[krModel](sw, rhow, rhoo);
         REAL lw = std::get<0>(lambdaWvalderiv);
         REAL dlwdsw = std::get<1>(lambdaWvalderiv);
         REAL ltotal = std::get<0>(lambdaTotalvalderiv);
@@ -201,9 +201,9 @@ void TMRSDataTransfer::TPetroPhysics::UpdateLambdasAndFracFlows(int krModel){
         std::tuple<REAL, REAL> valderiv(fracflow, dfracflowdsw);
         return valderiv;
     };
-    mFo[krModel] = [this,krModel](REAL &sw){
-        std::tuple<REAL, REAL> lambdaOvalderiv = mLambdaO[krModel](sw);
-        std::tuple<REAL, REAL> lambdaTotalvalderiv = mLambdaTotal[krModel](sw);
+    mFo[krModel] = [this,krModel](REAL &sw, REAL &rhow, REAL& rhoo){
+        std::tuple<REAL, REAL> lambdaOvalderiv = mLambdaO[krModel](sw, rhoo);
+        std::tuple<REAL, REAL> lambdaTotalvalderiv = mLambdaTotal[krModel](sw, rhow, rhoo);
         REAL lo = std::get<0>(lambdaOvalderiv);
         REAL dlodso = std::get<1>(lambdaOvalderiv);
         REAL ltotal = std::get<0>(lambdaTotalvalderiv);
