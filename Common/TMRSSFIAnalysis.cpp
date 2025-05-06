@@ -396,7 +396,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
             error_rel_transport = Norm(m_x_transport - m_transport_module->Solution())/Norm(m_transport_module->Solution());
         }
 
-        stop_criterion_Q = m_sim_data->mTNumerics.m_is_linearTrace? true : error_rel_transport < eps_tol; // Stop by saturation variation
+        stop_criterion_Q = m_sim_data->mTNumerics.m_is_linearTrace? true : (error_rel_transport < eps_tol); // Stop by saturation variation
         if (stop_criterion_Q && m_k_iteration >= 1) {
             std::cout << "SFI converged " << std::endl;
             std::cout << "Number of iterations = " << m_k_iteration << std::endl;
@@ -418,6 +418,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
         std::cout << "Mixed problem variation = " << error_rel_mixed << std::endl;
         std::cout << "Transport problem variation = " << error_rel_transport << std::endl;
         m_transport_module->fAlgebraicTransport.fCellsData.fSaturationLastState = m_transport_module->fAlgebraicTransport.fCellsData.fSaturation;
+        m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState(); //this should be called only once per time step
         return;
     }
     
@@ -454,7 +455,7 @@ void TMRSSFIAnalysis::SFIIteration(){
     if(shouldSolveDarcy){
         m_mixed_module->RunTimeStep(); // Newton iterations for mixed problem are done here till convergence
         VerifyElementFluxes();
-        // UpdateAllFluxInterfaces();
+        UpdateAllFluxInterfaces();
         if (m_sim_data->mTNumerics.m_is_linearTrace) {
             shouldSolveDarcy = false;
         }
@@ -489,7 +490,7 @@ void TMRSSFIAnalysis::UpdateAllFluxInterfaces(){
         m_transport_module->fAlgebraicTransport.UpdateIntegralFlux(bc);
     }
     
-    m_transport_module->fAlgebraicTransport.VerifyElementFLuxes();
+    // m_transport_module->fAlgebraicTransport.VerifyElementFLuxes();
 }
 
 void TMRSSFIAnalysis::VerifyElementFluxes(){

@@ -6,7 +6,7 @@
         "name": "dom",
         "dimension": 2,
         "matid": 1,
-        "K": 4.93462e-7, // [mm^2]
+        "K": 0.00000001, // [m^2]
         "phi": 0.3
     }
     ],
@@ -33,7 +33,7 @@
             "name": "lid",
             "matid": 4,
             "type": 0, // imposed pressure
-            "value": -9.33257e7, // [mPa]
+            "value": -10000.0, // [Pa]
             "functionID": 0,
             "ExternalSaturation": 1.0,
             "SaturationFunctionID": 0
@@ -52,21 +52,21 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.0000025,
+            "DeltaT": 0.00025,
             "NSteps": 1000,
-            "Gravity": [0.0, 0.0, 0.0], // [mm/s^2]
+            "Gravity": [0.0, 0.0, 0.0], // [m/s^2]
             "IsLinearTrace": false
         },
     "FluidProperties":
     {
-        "WaterDensity": 1.0e-6, //[kg/mm^3]
-        "WaterViscosity": 1.0, // cP
+        "WaterDensity": 1000, //[kg/m^3]
+        "WaterViscosity": 0.001, // Pa.s
         "WaterCompressibility": 0.0,
-        "OilDensity": 1.225e-9, //[kg/mm^3]
-        "OilViscosity": 0.01837, // cP
-        "OilCompressibility": 1.01325e-8, // [mPa^-1]
+        "OilDensity": 1.225, //[kg/m^3]
+        "OilViscosity": 1.81e-5, // Pa.s
+        "OilCompressibility": 1.168e-5, // [Pa^-1]
         "DensityModel": 0, // 0: Linear, 1: Exponential
-        "ReferencePressure": 0.0 // [mPa] atmosphere pressure
+        "ReferencePressure": 0.0 // [Pa]
     },
     "PetroPhysics":
     {

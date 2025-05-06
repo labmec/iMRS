@@ -126,11 +126,7 @@ void TMRSMixedAnalysis::RunTimeStep(){
 
         stop_criterion_Q = res_norm < res_tol;
         stop_criterion_corr_Q = corr_norm < corr_tol;
-        if (stop_criterion_Q) {
-            std::cout << "\n\n\t================================================" << std::endl;
-            std::cout << "Mixed operator: " << std::endl;
-            std::cout << "Iterative method converged with res_norm = " << res_norm << std::endl;
-            std::cout << "Number of iterations = " << m_k_iteration << std::endl;
+        if (stop_criterion_Q || stop_criterion_corr_Q) {
             fSolution = x;
             break;
         }
@@ -143,20 +139,20 @@ void TMRSMixedAnalysis::NewtonIteration(){
     if(mIsFirstAssembleQ == true)
     {
         fStructMatrix->SetNumThreads(m_sim_data->mTNumerics.m_nThreadsMixedProblem);
-        int64_t nel = fCompMesh->NElements();
-        for(int64_t el = 0; el<nel; el++)
-        {
-            TPZCompEl *cel = fCompMesh->Element(el);
-            TPZSubCompMesh *sub = dynamic_cast<TPZSubCompMesh *>(cel);
-            if(sub)
-            {
-//            int numthreads = 0;
-//                sub->SetAnalysisSparse(0); sub->Analysis()->StructMatrix()->SetNumThreads(m_sim_data->mTNumerics.m_nThreadsMixedProblem);
-//                TPZSymetricSpStructMatrixEigen matrix(sub);
-//                //matrix.SetNumThreads(n_threads);
-//                sub->Analysis()->SetStructuralMatrix(matrix);
-            }
-        }
+//         int64_t nel = fCompMesh->NElements();
+//         for(int64_t el = 0; el<nel; el++)
+//         {
+//             TPZCompEl *cel = fCompMesh->Element(el);
+//             TPZSubCompMesh *sub = dynamic_cast<TPZSubCompMesh *>(cel);
+//             if(sub)
+//             {
+// //            int numthreads = 0;
+// //                sub->SetAnalysisSparse(0); sub->Analysis()->StructMatrix()->SetNumThreads(m_sim_data->mTNumerics.m_nThreadsMixedProblem);
+// //                TPZSymetricSpStructMatrixEigen matrix(sub);
+// //                //matrix.SetNumThreads(n_threads);
+// //                sub->Analysis()->SetStructuralMatrix(matrix);
+//             }
+//         }
         mIsFirstAssembleQ=false;
     }
 
