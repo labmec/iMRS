@@ -567,6 +567,11 @@ void TPZAlgebraicTransport::TCellData::UpdateDensities(){
         REAL pressure = fPressure[icell];
         auto densityWvalderiv = fWaterDensityF(pressure);
         auto densityOvalderiv = fOilDensityF(pressure);
+        #ifdef PZDEBUG
+        if (std::get<0>(densityWvalderiv) < 0.0 || std::get<0>(densityOvalderiv) < 0.0) {
+            DebugStop();
+        }
+        #endif
         fDensityWater[icell] = std::get<0>(densityWvalderiv);
         fdDensityWaterdp[icell]= std::get<1>(densityWvalderiv);
         fDensityOil[icell] = std::get<0>(densityOvalderiv);
@@ -707,28 +712,26 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
     // }
 
     REAL massConservation = fluxIntegratedInlet + intMass + fluxIntegratedOutlet - initialMass;
-    std::cout << "\n ------------------ Global Conservation Diagnostics ------------------" << std::endl;
-    std::cout << "Inlet mass: " << std::setprecision(14) << fluxIntegratedInlet << std::endl;
-    std::cout << "Outlet mass: " << fluxIntegratedOutlet << std::endl;
-    std::cout << "Inlet - Outlet: " << fluxIntegratedInlet + fluxIntegratedOutlet << std::endl;
+    std::cout << "\nGlobal Conservation Diagnostics" << std::endl;
+    std::cout << "---Inlet mass: " << std::setprecision(14) << fluxIntegratedInlet << std::endl;
+    std::cout << "---Outlet mass: " << fluxIntegratedOutlet << std::endl;
+    std::cout << "---Inlet - Outlet: " << fluxIntegratedInlet + fluxIntegratedOutlet << std::endl;
     if(fabs(fluxIntegratedNoFlux) > 1.e-10 ){
-        std::cout << "=====> WARNING! Flux through no flux bc is significant. Total = " << fluxIntegratedNoFlux << std::endl;
+        std::cout << "---WARNING! Flux through no flux bc is significant: " << fluxIntegratedNoFlux << std::endl;
     }
     else{
-        std::cout << "NoFlux mass: " << fluxIntegratedNoFlux << std::endl;
+        std::cout << "---NoFlux mass: " << fluxIntegratedNoFlux << std::endl;
     }    
-    std::cout << "System mass: " << intMass << std::endl;
-    std::cout << "Initial mass: " << initialMass << std::endl;
-    std::cout << "System mass - Initial mass: " << intMass - initialMass << std::endl;
-    std::cout << "Accumulated outlet mass: " << massOut << std::endl;
+    std::cout << "---System mass: " << intMass << std::endl;
+    std::cout << "---Initial mass: " << initialMass << std::endl;
+    std::cout << "---System mass - Initial mass: " << intMass - initialMass << std::endl;
+    std::cout << "---Accumulated outlet mass: " << massOut << std::endl;
 
     if(std::abs(massConservation) < 1.0e-8 ){
-        std::cout << "\t===> Global mass conservation is ok! Total massLoss = " << std::setprecision(14) << massConservation << std::endl;
+        std::cout << "---Global mass conservation is ok! Total mass loss: " << std::setprecision(14) << massConservation << std::endl;
     }
     else{
-        std::cout << "\t====> WARNING! Global mass conservation NOT ok! <=====" << std::endl;
-        std::cout << "Global mass loss: " << std::setprecision(14) << massConservation << std::endl;
-        // DebugStop();
+        std::cout << "---WARNING! Global mass conservation NOT ok! Total mass loss: " << std::setprecision(14) << massConservation << std::endl;
     }
     massOut += fluxIntegratedOutlet;
     initialMass = intMass; //initialMass now stands for the mass at the end of the previous time step

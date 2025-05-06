@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
   TMRSMixedAnalysis* mixAnalisys = new TMRSMixedAnalysis(mp_cmesh, renumtype);
   mixAnalisys->SetDataTransfer(&sim_data);
   UsePardiso_Q = true;
-  mixAnalisys->Configure(glob_n_threads, UsePardiso_Q, UsingPzSparse);
+
   TPZFastCondensedElement::fSkipLoadSolution = false;
   if (sim_data.mTNumerics.m_run_with_transport) {
     aspace.BuildAuxTransportCmesh();
@@ -158,7 +158,11 @@ int main(int argc, char* argv[]) {
 
     // Looping over time steps
     for (int it = 1; it <= n_steps; it++) {
+      std::cout << "\n=================================================================" << std::endl;
+      std::cout << "-------------------------- TIME Step " << it << " --------------------------" << std::endl;
+      std::cout << "=================================================================" << std::endl;
       sim_time = it * dt;
+      std::cout << "Simulation time:  " << sim_time << std::endl;
       sfi_analysis->m_transport_module->SetCurrentTime(dt);
       computeWaterHeight(sfi_analysis, sim_data, sim_time);
       sfi_analysis->RunTimeStep();
@@ -169,10 +173,6 @@ int main(int argc, char* argv[]) {
 
       // Only post process based on reporting times
       if (sim_time >= current_report_time) {
-        cout << "\n---------------------- SFI Step " << it << " ----------------------" << endl;
-        std::cout << "Simulation time:  " << sim_time << std::endl;
-        // mp_cmesh->UpdatePreviousState(-1.);
-        // mp_cmesh->TransferMultiphysicsSolution();
         if (it != 1)
         {
           sfi_analysis->PostProcessTimeStep(typeToPPsteps, mp_cmesh->Dimension(), it);
@@ -181,14 +181,14 @@ int main(int argc, char* argv[]) {
         current_report_time = reporting_times[pos];
 
         REAL mass = sfi_analysis->m_transport_module->fAlgebraicTransport.CalculateMass();
-        std::cout << "Mass report at time : " << sim_time << std::endl;
-        std::cout << "Mass integral :  " << mass << std::endl;
+        std::cout << "\nMass integral :  " << mass << std::endl;
       }
       sfi_analysis->m_transport_module->fAlgebraicTransport.VerifyConservation(it);
     }
 
   }
   else {
+    mixAnalisys->Configure(glob_n_threads, UsePardiso_Q, UsingPzSparse);
     SetCompressibilityAndGravity(sim_data, mixAnalisys); //is necessary to explicitly set the properties as no saturation is computed
     mixAnalisys->Assemble();
     mixAnalisys->Solve();
@@ -400,6 +400,8 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   sim_data.mTNumerics.m_sfi_tol = 0.00000001;
   sim_data.mTNumerics.m_res_tol_transport = 0.00000001;
   sim_data.mTNumerics.m_corr_tol_transport = 0.00000001;
+  sim_data.mTNumerics.m_res_tol_mixed = 0.00000001;
+  sim_data.mTNumerics.m_corr_tol_mixed = 0.00000001;
   sim_data.mTNumerics.m_four_approx_spaces_Q = true;
   sim_data.mTNumerics.m_nThreadsMixedProblem = glob_n_threads;
   sim_data.mTNumerics.m_max_iter_sfi = 20;
