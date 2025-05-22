@@ -93,7 +93,14 @@ int main(int argc, char *argv[])
   std::ofstream out("gmesh_up.vtk");
   TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
   auto cmesh = CreateCMesh(gmesh, solution);
+  TPZManVector<REAL, 3> errorsum(3, 0.);
+  cmesh->ElementSolution().Redim(cmesh->NElements(),3);
+  cmesh->EvaluateError(true, errorsum);
+  std::cout << "Errorsum constant approx: " << errorsum[0] << " " << errorsum[1] << " " << errorsum[2] << std::endl;
   ComputeGradients(cmesh);
+  errorsum.Fill(0.);
+  cmesh->EvaluateError(true, errorsum);
+  std::cout << "Errorsum reconstructed: " << errorsum[0] << " " << errorsum[1] << " " << errorsum[2] << std::endl;
   return 0;
   TPZVec<REAL> AllCellSols;
   TPZFMatrix<REAL> AllCellSolGradients;
@@ -821,7 +828,7 @@ void ComputeGradients(TPZCompMesh *cmesh) {
   TPZStack<std::string> fields;
   fields.Push("Solution");
   fields.Push("Derivative");
-  TPZVTKGenerator vtk(cmesh, fields, "cmesh.vtk" , 0, cmesh->Dimension());
+  TPZVTKGenerator vtk(cmesh, fields, "cmeshafter.vtk" , 0, cmesh->Dimension());
   vtk.Do();
 }
 
