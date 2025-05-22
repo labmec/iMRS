@@ -232,9 +232,10 @@ void FillDataTransfer(std::string filenameBase, TMRSDataTransfer& sim_data) {
     sim_data.mTNumerics.m_run_with_transport = numerics["RunWithTransport"];
      
     if (sim_data.mTNumerics.m_run_with_transport) {
-        sim_data.mTNumerics.m_UseGradRec =numerics["UseGradientRec"];
-        sim_data.mTNumerics.m_TransportSolMethod =numerics["SolverTransportMethod"];
-        
+      if (numerics.find("UseGradientRec") != numerics.end())
+        sim_data.mTNumerics.m_UseGradRec = numerics["UseGradientRec"];
+      if (numerics.find("SolverTransportMethod") != numerics.end())
+        sim_data.mTNumerics.m_TransportSolMethod = numerics["SolverTransportMethod"];
       if (numerics.find("DeltaT") == numerics.end()) DebugStop();
       sim_data.mTNumerics.m_dt = numerics["DeltaT"];
       if (numerics.find("NSteps") == numerics.end()) DebugStop();
@@ -284,10 +285,13 @@ void FillDataTransfer(std::string filenameBase, TMRSDataTransfer& sim_data) {
   if (input.find("PetroPhysics") != input.end()) {
     auto petro = input["PetroPhysics"];
     if (petro.find("KrModel") == petro.end()) DebugStop();
-    if (petro["KrModel"] == 0) {
-      sim_data.mTNumerics.m_ISLinearKrModelQ = true;
-    } else {
-      sim_data.mTNumerics.m_ISLinearKrModelQ = false;
+    sim_data.mTPetroPhysics.mKrModel = petro["KrModel"];
+    if (petro["KrModel"] == 2) {
+        if (petro.find("Swr") == petro.end()) DebugStop();
+        if (petro.find("Sor") == petro.end()) DebugStop();
+        sim_data.mTPetroPhysics.mSwr = petro["Swr"];
+        sim_data.mTPetroPhysics.mSor = petro["Sor"];
+        sim_data.mTPetroPhysics.CreateQuadraticResidualKrModel(); //It is necessary to call this method after the residual saturations are set
     }
     sim_data.mTPetroPhysics.mWaterViscosity = sim_data.mTFluidProperties.mWaterViscosity;
     sim_data.mTPetroPhysics.mOilViscosity = sim_data.mTFluidProperties.mOilViscosity;
