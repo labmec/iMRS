@@ -1,0 +1,78 @@
+{
+    "Mesh": "Mesh_ref_3.msh",
+    
+    "Domains": [
+    {
+        "name": "dom",
+        "dimension": 2,
+        "matid":1,
+        "K": 1,
+        "phi": 1.0
+    }
+   
+    ],
+    "Boundary": [
+        {
+            "name": "inlet",
+            "matid": 2,
+            "type": 0, // imposed pressure
+            "value": 1.0,//0.05
+            "functionID": 0,
+            "ExternalSaturation": 1.0,
+            "SaturationFunctionID": 0
+        },
+        {
+            "name": "noflux",
+            "matid": 4,
+            "type": 1,  // imposed flux
+            "value": 0.0,
+            "functionID": 0,
+            "ExternalSaturation": 0.0,
+            "SaturationFunctionID": 0
+        },
+        {
+            "name": "outlet",
+            "matid": 3,
+            "type": 0, // imposed pressure
+            "value": 0.0,//0.0
+            "functionID": 0,
+            "ExternalSaturation": 0.0,
+            "SaturationFunctionID": 0
+        }
+        
+    ],
+
+    "Numerics":
+        {
+            "RunWithTransport": true,
+            "DeltaT": 0.00266667,//
+            "NSteps": 2, //40
+            "Gravity": [0.0, -0.00001, 0.0],
+            "IsLinearTrace": true,
+            "IsAxisymmetric": false,
+            "UseGradientRec": true,
+            "SolverTransportMethod": 3
+        },
+    "FluidProperties":
+    {
+        "WaterDensity": 1.0e-6,
+        "WaterViscosity": 1.0,
+        "WaterCompressibility": 4.4e-10,
+        "OilDensity": 1.225e-9,
+        "OilViscosity": 1.0,
+        "OilCompressibility": 4.4e-10,
+        "DensityModel": 0 // 0: Linear, 1: Exponential
+    },
+    "PetroPhysics":
+    {
+        "KrModel": 0 // 0: Linear, 1: Quadratic
+    },
+    "ReservoirProperties":
+    {
+        "s0":
+        {
+            "functionType": 0,
+            "value": 0.0 //This is used to apply a constant initial saturation different from 0.0
+        }
+    }
+}
