@@ -1293,6 +1293,21 @@ void TPZAlgebraicDataTransfer::InitializeTransportDataStructure(TPZAlgebraicTran
         int matId = gel->MaterialId();
         
         REAL volume = gel->Volume();
+        if (transport.fCellsData.fsim_data->mTNumerics.m_is_axisymmetric)
+        {
+            int ncorner = gel->NCornerNodes();
+            REAL rmin = std::numeric_limits<REAL>::max();
+            REAL rmax = std::numeric_limits<REAL>::min();
+            for (int ic=0; ic<ncorner; ic++)
+            {
+                REAL x = gel->NodePtr(ic)->Coord(0);
+                if (fabs(x) < rmin) rmin = x;
+                if (fabs(x) > rmax) rmax = x;
+            }
+            if (rmin*rmax < 0.0) DebugStop();   
+            REAL h = volume / (rmax - rmin);
+            volume = h * M_PI * (rmax * rmax - rmin * rmin);
+        }
         int side = gel->NSides()-1;
         transport.fCellsData.fVolume[i]=volume;
         transport.fCellsData.fMatId[i]=matId;
@@ -1486,13 +1501,18 @@ void TPZAlgebraicDataTransfer::TransferLambdaCoefficients()
            REAL so = 1-sw;
            REAL drhoWdp = meshit.fTransport->fCellsData.fdDensityWaterdp[cellindex];
            REAL drhoOdp = meshit.fTransport->fCellsData.fdDensityOildp[cellindex];
-           REAL compterm = (porosity/dt)*((sw*drhoWdp)+(so*drhoOdp));
+           REAL compterm = -(porosity/dt)*((sw*drhoWdp)+(so*drhoOdp)); //negative sign in accordance with the lyx 
 
            REAL swlast =meshit.fTransport->fCellsData.fSaturationLastState[cellindex];
            REAL solast = 1.0 - swlast;
+           REAL plast = meshit.fTransport->fCellsData.fPressure[cellindex];
+           REAL rhoW = meshit.fTransport->fCellsData.fDensityWater[cellindex];
+           REAL rhoO = meshit.fTransport->fCellsData.fDensityOil[cellindex];
            REAL rhoWlast =meshit.fTransport->fCellsData.fDensityWaterLastState[cellindex];
            REAL rhoOlast =meshit.fTransport->fCellsData.fDensityOilLastState[cellindex];
-           REAL comptermrhs = (porosity/dt)*((swlast*rhoWlast)+(solast*rhoOlast));
+           REAL termrhscurrent = (sw*rhoW)+(so*rhoO);
+           REAL termrhslast = (swlast*rhoWlast)+(solast*rhoOlast);
+           REAL comptermrhs = (porosity/dt)*(termrhscurrent-termrhslast) + compterm*plast;
 
            condensed->SetCompressibiilityTerm(compterm, comptermrhs);
        }

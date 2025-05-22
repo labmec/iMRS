@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/module", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/test-1d-vacuum", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -117,14 +117,14 @@ int main(int argc, char* argv[]) {
   TPZMultiphysicsCompMesh* mp_cmesh = aspace.GetMixedOperator();  
 
   // =========> Create Analysis
-  RenumType renumtype = RenumType::EDefault;
+  RenumType renumtype = RenumType::EMetis;
   bool UsingPzSparse = true;  // Necessary to use multithread for now...
   bool UsePardiso_Q = true;   // lighting fast!
   cout << "\n---------------------- Creating Analysis (Might optimize bandwidth) ----------------------" << endl;
   TMRSMixedAnalysis* mixAnalisys = new TMRSMixedAnalysis(mp_cmesh, renumtype);
   mixAnalisys->SetDataTransfer(&sim_data);
   UsePardiso_Q = true;
-  mixAnalisys->Configure(glob_n_threads, UsePardiso_Q, UsingPzSparse);
+
   TPZFastCondensedElement::fSkipLoadSolution = false;
   if (sim_data.mTNumerics.m_run_with_transport) {
     aspace.BuildAuxTransportCmesh();
@@ -158,7 +158,11 @@ int main(int argc, char* argv[]) {
 
     // Looping over time steps
     for (int it = 1; it <= n_steps; it++) {
+      std::cout << "\n=================================================================" << std::endl;
+      std::cout << "-------------------------- TIME Step " << it << " --------------------------" << std::endl;
+      std::cout << "=================================================================" << std::endl;
       sim_time = it * dt;
+      std::cout << "Simulation time:  " << sim_time << std::endl;
       sfi_analysis->m_transport_module->SetCurrentTime(dt);
       computeWaterHeight(sfi_analysis, sim_data, sim_time);
       sfi_analysis->RunTimeStep();
@@ -169,10 +173,6 @@ int main(int argc, char* argv[]) {
 
       // Only post process based on reporting times
       if (sim_time >= current_report_time) {
-        cout << "\n---------------------- SFI Step " << it << " ----------------------" << endl;
-        std::cout << "Simulation time:  " << sim_time << std::endl;
-        // mp_cmesh->UpdatePreviousState(-1.);
-        // mp_cmesh->TransferMultiphysicsSolution();
         if (it != 1)
         {
           sfi_analysis->PostProcessTimeStep(typeToPPsteps, mp_cmesh->Dimension(), it);
@@ -181,14 +181,14 @@ int main(int argc, char* argv[]) {
         current_report_time = reporting_times[pos];
 
         REAL mass = sfi_analysis->m_transport_module->fAlgebraicTransport.CalculateMass();
-        std::cout << "Mass report at time : " << sim_time << std::endl;
-        std::cout << "Mass integral :  " << mass << std::endl;
+        std::cout << "\nMass integral :  " << mass << std::endl;
       }
       sfi_analysis->m_transport_module->fAlgebraicTransport.VerifyConservation(it);
     }
 
   }
   else {
+    mixAnalisys->Configure(glob_n_threads, UsePardiso_Q, UsingPzSparse);
     SetCompressibilityAndGravity(sim_data, mixAnalisys); //is necessary to explicitly set the properties as no saturation is computed
     mixAnalisys->Assemble();
     mixAnalisys->Solve();
@@ -217,7 +217,7 @@ TPZGeoMesh* ReadMeshFromGmsh(TMRSDataTransfer& sim_data) {
   string file_name = std::string(FRACMESHES) + "/../Filling/" + sim_data.mTGeometry.mGmeshFileName;
   {
     TPZGmshReader reader;
-    TPZManVector<std::map<std::string, int>, 4> stringtoint(5);
+    TPZManVector<std::map<std::string, int>, 4> stringtoint(4);
     stringtoint[2]["dom"] = sim_data.mTGeometry.mDomainNameAndMatId["dom"];
 
     stringtoint[1]["bcl"] = sim_data.mTBoundaryConditions.mDomainNameAndMatId["bcl"];
@@ -353,16 +353,22 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
     } else {
       sim_data.mTFluidProperties.CreateExponentialDensityFunction();
     }
+    if (properties.find("ReferencePressure") != properties.end()) {
+      sim_data.mTFluidProperties.mReferencePressure = properties["ReferencePressure"];
+    }
   }
 
   // ------------------------ Petro Physics ------------------------
   if (input.find("PetroPhysics") != input.end()) {
     auto petro = input["PetroPhysics"];
     if (petro.find("KrModel") == petro.end()) DebugStop();
-    if (petro["KrModel"] == 0) {
-      sim_data.mTNumerics.m_ISLinearKrModelQ = true;
-    } else {
-      sim_data.mTNumerics.m_ISLinearKrModelQ = false;
+    sim_data.mTPetroPhysics.mKrModel = petro["KrModel"];
+    if (petro["KrModel"] == 2) {
+        if (petro.find("Swr") == petro.end()) DebugStop();
+        if (petro.find("Sor") == petro.end()) DebugStop();
+        sim_data.mTPetroPhysics.mSwr = petro["Swr"];
+        sim_data.mTPetroPhysics.mSor = petro["Sor"];
+        sim_data.mTPetroPhysics.CreateQuadraticResidualKrModel(); //It is necessary to call this method after the residual saturations are set
     }
     sim_data.mTPetroPhysics.mWaterViscosity = sim_data.mTFluidProperties.mWaterViscosity;
     sim_data.mTPetroPhysics.mOilViscosity = sim_data.mTFluidProperties.mOilViscosity;
@@ -394,6 +400,8 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   sim_data.mTNumerics.m_sfi_tol = 0.00000001;
   sim_data.mTNumerics.m_res_tol_transport = 0.00000001;
   sim_data.mTNumerics.m_corr_tol_transport = 0.00000001;
+  sim_data.mTNumerics.m_res_tol_mixed = 0.00000001;
+  sim_data.mTNumerics.m_corr_tol_mixed = 0.00000001;
   sim_data.mTNumerics.m_four_approx_spaces_Q = true;
   sim_data.mTNumerics.m_nThreadsMixedProblem = glob_n_threads;
   sim_data.mTNumerics.m_max_iter_sfi = 20;
@@ -422,14 +430,14 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   REAL dt = sim_data.mTNumerics.m_dt;
   TPZStack<REAL, 100> reporting_times;
   REAL time = sim_data.mTPostProcess.m_file_time_step;
-  int n_reporting_times = (n_steps) / (time * 100 / dt) + 1;
+  int n_reporting_times = (n_steps) / (time * 1 / dt) + 1;
   REAL r_time = 0.0;
   int j=1;
   for (int i = 1; i <= n_reporting_times; i++) {
     
     r_time = j * dt * (time / dt);
     reporting_times.push_back(r_time);
-    j+=100;
+    j+=1;
   }
   sim_data.mTPostProcess.m_vec_reporting_times = reporting_times;
 }

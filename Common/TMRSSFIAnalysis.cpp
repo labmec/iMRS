@@ -183,6 +183,7 @@ void TMRSSFIAnalysis::FillProperties(){
             int ncells = m_transport_module->fAlgebraicTransport.fCellsData.fDensityOil.size();
             REAL rhow = m_sim_data->mTFluidProperties.mWaterDensityRef;
             REAL rhoo = m_sim_data->mTFluidProperties.mOilDensityRef;
+            m_transport_module->fAlgebraicTransport.initialMass = 0.0;
           
             for (int icell =0; icell<ncells; icell++) {
                 m_transport_module->fAlgebraicTransport.fCellsData.fDensityWater[icell]= rhow; m_transport_module->fAlgebraicTransport.fCellsData.fDensityOil[icell]= rhoo;
@@ -200,12 +201,24 @@ void TMRSSFIAnalysis::FillProperties(){
                         break;
                     }
                 }
+                REAL sat = m_transport_module->fAlgebraicTransport.fCellsData.fSaturation[icell];
+                REAL phi = m_transport_module->fAlgebraicTransport.fCellsData.fporosity[icell];
+                REAL vol = m_transport_module->fAlgebraicTransport.fCellsData.fVolume[icell];
+                m_transport_module->fAlgebraicTransport.initialMass += sat * phi * vol;
+
+                REAL kappa = m_sim_data->mTReservoirProperties.m_permeabilitiesbyId[matid]; //if no permeability function is set, all cells must have the same value (for IHU)
+                m_transport_module->fAlgebraicTransport.fCellsData.fKx[icell] = kappa;
+                m_transport_module->fAlgebraicTransport.fCellsData.fKy[icell] = kappa;
+                m_transport_module->fAlgebraicTransport.fCellsData.fKz[icell] = kappa;
+                
                 if (!fountmat){
                     DebugStop();
                 }
 //
                 
             }
+            m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState();
+            m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
             
             m_transport_module->fAlgebraicTransport.fdt = m_sim_data->mTNumerics.m_dt;
             bool foundinlet = false;
@@ -366,7 +379,6 @@ void TMRSSFIAnalysis::RunTimeStep(){
     m_x_mixed = m_mixed_module->Solution();
     m_x_transport = m_transport_module->Solution();
     
-    
     int n_iterations = m_sim_data->mTNumerics.m_max_iter_sfi;
     REAL eps_tol = m_sim_data->mTNumerics.m_sfi_tol;
     bool stop_criterion_Q = false;
@@ -374,6 +386,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
     REAL error_rel_transport = 1.0;
     
     for (m_k_iteration = 1; m_k_iteration <= n_iterations; m_k_iteration++) {
+        std::cout << "\nSFI iteration: " << m_k_iteration << std::endl;
         
         SFIIteration();        
         error_rel_mixed = Norm(m_x_mixed - m_mixed_module->Solution())/Norm(m_mixed_module->Solution());
@@ -384,13 +397,12 @@ void TMRSSFIAnalysis::RunTimeStep(){
             error_rel_transport = Norm(m_x_transport - m_transport_module->Solution())/Norm(m_transport_module->Solution());
         }
 
-        stop_criterion_Q = error_rel_transport < eps_tol; // Stop by saturation variation
+        stop_criterion_Q = m_sim_data->mTNumerics.m_is_linearTrace? true : (error_rel_transport < eps_tol); // Stop by saturation variation
         if (stop_criterion_Q && m_k_iteration >= 1) {
-            std::cout << "SFI converged " << std::endl;
+            std::cout << "SFI converged with error_rel_transport: " << error_rel_transport << " and error_rel_mixed: " << error_rel_mixed << std::endl;
             std::cout << "Number of iterations = " << m_k_iteration << std::endl;
-//            std::cout << "Mixed problem variation = " << error_rel_mixed << std::endl;
-//            std::cout << "Transport problem variation = " << error_rel_transport << std::endl;
             m_transport_module->fAlgebraicTransport.fCellsData.fSaturationLastState = m_transport_module->fAlgebraicTransport.fCellsData.fSaturation;
+            m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState(); //this should be called only once per time step
             break;
         }
      
@@ -405,6 +417,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
         std::cout << "Mixed problem variation = " << error_rel_mixed << std::endl;
         std::cout << "Transport problem variation = " << error_rel_transport << std::endl;
         m_transport_module->fAlgebraicTransport.fCellsData.fSaturationLastState = m_transport_module->fAlgebraicTransport.fCellsData.fSaturation;
+        m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState(); //this should be called only once per time step
         return;
     }
     
@@ -413,7 +426,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
 
 void TMRSSFIAnalysis::PostProcessTimeStep(const int type, const int dim, int step){
 
-    std::cout << "\n---------------------- TMRSSFIAnalysis Post Process ----------------------" << std::endl;
+    std::cout << "\nTMRSSFIAnalysis Post Process" << std::endl;
     TPZSimpleTimer timer_pp("Timer SFIAnalysis Post Process");
     if (type == 0) {
         m_mixed_module->PostProcessTimeStep(dim, step);
@@ -426,19 +439,20 @@ void TMRSSFIAnalysis::PostProcessTimeStep(const int type, const int dim, int ste
         m_transport_module->PostProcessTimeStep();
     }
 
-    std::cout << "TMRSSFIAnalysis Post Process total time : " << timer_pp.ReturnTimeDouble()/1000. << " seconds" << std::endl;    
+    std::cout << "TMRSSFIAnalysis Post Process total time: " << timer_pp.ReturnTimeDouble()/1000. << " seconds" << std::endl;    
 }
 
 void TMRSSFIAnalysis::SFIIteration(){
     
 
     TPZSimpleTimer timer_sfi("Timer SFI Iteration");
-    m_transport_module->fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTNumerics.m_ISLinearKrModelQ);
-
+    
+    m_transport_module->fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateMixedDensity();
     fAlgebraicDataTransfer.TransferLambdaCoefficients();
 
     if(shouldSolveDarcy){
+        std::cout << "---Running Darcy problem" << std::endl;
         m_mixed_module->RunTimeStep(); // Newton iterations for mixed problem are done here till convergence
         VerifyElementFluxes();
         UpdateAllFluxInterfaces();
@@ -447,15 +461,13 @@ void TMRSSFIAnalysis::SFIIteration(){
         }
     }
     fAlgebraicDataTransfer.TransferPressures();
-//    m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
+    m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensities();
     
-    std::cout << "Running transport problem now..." << std::endl;
+    std::cout << "---Running Transport problem" << std::endl;
     // Solves the transport problem
-    m_transport_module->RunTimeStep();
+    //m_transport_module->RunTimeStep();
     
-    std::cout << "\n ==> Total SFIIteration time: " << timer_sfi.ReturnTimeDouble()/1000 << " seconds" << std::endl;
-    
-//    TransferToMixedModule(); // Transfer to mixed
+    std::cout << "SFIIteration time: " << timer_sfi.ReturnTimeDouble()/1000 << " seconds" << std::endl;
 }
 
 void TMRSSFIAnalysis::UpdateAllFluxInterfaces(){
@@ -476,7 +488,7 @@ void TMRSSFIAnalysis::UpdateAllFluxInterfaces(){
         m_transport_module->fAlgebraicTransport.UpdateIntegralFlux(bc);
     }
     
-    m_transport_module->fAlgebraicTransport.VerifyElementFLuxes();
+    // m_transport_module->fAlgebraicTransport.VerifyElementFLuxes();
 }
 
 void TMRSSFIAnalysis::VerifyElementFluxes(){
@@ -536,11 +548,11 @@ void TMRSSFIAnalysis::VerifyElementFluxes(){
             }
         }
         if(std::abs(sumel)> tol ){
-            std::cout << "\n\nERROR! Conservation of element index " << cel->Reference()->Index() << " is " << sumel << std::endl;
+            std::cout << "------ERROR! Conservation of element index " << cel->Reference()->Index() << " is " << sumel << std::endl;
             DebugStop();
         }
     }
-    std::cout << "\n\n===> Nice! All flux elements satisfy conservation up to tolerance " << tol << std::endl;
+    std::cout << "------All flux elements satisfy conservation up to tolerance " << tol << std::endl;
 }
 
 void TMRSSFIAnalysis::TransferToTransportModule(){

@@ -566,7 +566,6 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElementsEigen()
             LOGPZ_DEBUG(logger, sout.str())
         }
 #endif
-        TPZAutoPointer<TPZGuiInterface> guiInterface;
 //        subcmesh->SetAnalysisSkyline(numthreads, preconditioned, guiInterface);
         
         subcmesh->SaddlePermute();
@@ -584,7 +583,6 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElementsEigen()
         step->SetDirect(ELDLt);
         TPZAutoPointer<TPZMatrixSolver<STATE> > autostep = step;
         Analysis->SetSolver(autostep);
-        Analysis->SetGuiInterface(guiInterface);
 //        subcmesh->SetAnalysis(Analysis);
         
 //        std::ofstream filehide2("subcmeshAfter.txt");
@@ -656,8 +654,7 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
             LOGPZ_DEBUG(logger, sout.str())
         }
 #endif
-        TPZAutoPointer<TPZGuiInterface> guiInterface;
-        subcmesh->SetAnalysisSkyline(numthreads, preconditioned, guiInterface);
+        subcmesh->SetAnalysisSkyline(numthreads, preconditioned);
         
         
         

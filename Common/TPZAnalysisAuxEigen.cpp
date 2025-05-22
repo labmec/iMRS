@@ -746,6 +746,7 @@ void TPZAnalysisAuxEigen::AssembleResidual(){
         for (int64_t iface = 0; iface < nfaces; iface++) {
             std::pair<int64_t, int64_t> lrindex = fAlgebraicTransport->fInterfaceData[*it].fLeftRightVolIndex[iface];
             int64_t left = lrindex.first;
+            if (left < 0) DebugStop();
             int64_t lefteq = fAlgebraicTransport->fCellsData.fEqNumber[left];
             TPZVec<int64_t> indexes(1);
             indexes[0]=lefteq;
@@ -753,6 +754,7 @@ void TPZAnalysisAuxEigen::AssembleResidual(){
             elmat.Resize(1, 1);
             elmat(0,0) = 0;
             ef.Resize(1, 1);
+            ef(0,0) = 0;
             fAlgebraicTransport->ContributeBCInterface(iface, elmat, ef, *it); //here
             size_t i_rhs_begin = cont + n_cells + 2*(n_internal_faces + n_internal_faces1 + n_internal_faces2 + n_internal_faces3);
             m_rhs_triplets[i_rhs_begin] = Eigen::Triplet<REAL>(indexes[0],0, ef(0,0));
@@ -833,7 +835,7 @@ void TPZAnalysisAuxEigen::Solve(){
         // m_analysis.setTolerance(1e-14);
         // m_analysis.setMaxIterations(1000);
         m_analysis.compute(m_transmissibility); //Using LU
-        isFirst=true;
+        // isFirst=true;
     }
     
     Eigen::VectorXd ds = m_analysis.solve(m_rhs);

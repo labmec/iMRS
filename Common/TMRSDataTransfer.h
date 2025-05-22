@@ -179,25 +179,40 @@ class TMRSDataTransfer : public TMRSSavable {
    public:
     REAL mOilViscosity;
     REAL mWaterViscosity;
+    REAL mSwr; // residual water saturation
+    REAL mSor; // residual oil saturation
+    int mKrModel; // 0 - Linear, 1 - Quadratic, 2 - Quadratic with residual
 
     /** @brief Contains the water relative permeability model for each layer */
     std::vector<TRSLinearInterpolator> mLayer_Krw_RelPerModel;
     /** @brief Contains the oil relative permeability model for each layer */
     std::vector<TRSLinearInterpolator> mLayer_Kro_RelPerModel;
 
-    std::function<std::tuple<REAL, REAL>(REAL &)> mKro;
-    std::function<std::tuple<REAL, REAL>(REAL &)> mKrw;
-    std::function<std::tuple<REAL, REAL>(REAL &)> mFo;
-    std::function<std::tuple<REAL, REAL>(REAL &)> mFw;
-    std::function<std::tuple<REAL, REAL>(REAL &)> mLambdaW;
-    std::function<std::tuple<REAL, REAL>(REAL &)> mLambdaO;
-    std::function<std::tuple<REAL, REAL>(REAL &)> mLambdaTotal;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mKro;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &)>> mKrw;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &, REAL &)>> mFo;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &, REAL &)>> mFw;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &)>> mLambdaW;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &)>> mLambdaO;
+    std::vector<std::function<std::tuple<REAL, REAL>(REAL &, REAL &, REAL &)>> mLambdaTotal;
 
     /** @brief Default constructor */
     TPetroPhysics() {
       mOilViscosity = 1.0;
       mWaterViscosity = 1.0;
+      REAL mSwr = 0.0; 
+      REAL mSor = 0.0;
+      int mKrModel = 0;
+      mKro.resize(3);
+      mKrw.resize(3);
+      mFo.resize(3);
+      mFw.resize(3);
+      mLambdaW.resize(3);
+      mLambdaO.resize(3);
+      mLambdaTotal.resize(3);
       CreateLinearKrModel();
+      CreateQuadraticKrModel();
+      CreateQuadraticResidualKrModel();
       mLayer_Krw_RelPerModel.clear();
       mLayer_Kro_RelPerModel.clear();
     }
@@ -210,6 +225,9 @@ class TMRSDataTransfer : public TMRSSavable {
     TPetroPhysics(const TPetroPhysics &other) {
       mOilViscosity = other.mOilViscosity;
       mWaterViscosity = other.mWaterViscosity;
+      mSwr = other.mSwr;
+      mSor = other.mSor;
+      mKrModel = other.mKrModel;
       mKro = other.mKro;
       mKrw = other.mKrw;
       mFo = other.mFo;
@@ -227,6 +245,9 @@ class TMRSDataTransfer : public TMRSSavable {
       {
         mOilViscosity = other.mOilViscosity;
         mWaterViscosity = other.mWaterViscosity;
+        mSwr = other.mSwr;
+        mSor = other.mSor;
+        mKrModel = other.mKrModel;
         mKro = other.mKro;
         mKrw = other.mKrw;
         mFo = other.mFo;
@@ -241,7 +262,8 @@ class TMRSDataTransfer : public TMRSSavable {
     }
     void CreateLinearKrModel();
     void CreateQuadraticKrModel();
-    void UpdateLambdasAndFracFlows();
+    void CreateQuadraticResidualKrModel();
+    void UpdateLambdasAndFracFlows(int krModel);
   };
 
   /**
@@ -533,8 +555,6 @@ class TMRSDataTransfer : public TMRSSavable {
 
     std::vector<REAL> m_gravity;
 
-    bool m_ISLinearKrModelQ;
-
     int m_nThreadsMixedProblem = 0;
 
     bool m_UseSubstructures_Q;
@@ -558,7 +578,6 @@ class TMRSDataTransfer : public TMRSSavable {
       m_need_merge_meshes_Q = true;
       m_SpaceType = ENone;
       m_gravity.resize(3, 0.0);
-      m_ISLinearKrModelQ = true;
       m_nThreadsMixedProblem = 0;
       m_MortarBorderElementPresOrder = 0;
       m_MortarBorderElementFluxOrder = 0;
@@ -588,7 +607,6 @@ class TMRSDataTransfer : public TMRSSavable {
       m_need_merge_meshes_Q = other.m_need_merge_meshes_Q;
       m_SpaceType = other.m_SpaceType;
       m_gravity = other.m_gravity;
-      m_ISLinearKrModelQ = other.m_ISLinearKrModelQ;
       m_nThreadsMixedProblem = other.m_nThreadsMixedProblem;
       m_MortarBorderElementPresOrder = other.m_MortarBorderElementPresOrder;
       m_MortarBorderElementFluxOrder = other.m_MortarBorderElementFluxOrder;
@@ -620,7 +638,6 @@ class TMRSDataTransfer : public TMRSSavable {
       m_need_merge_meshes_Q = other.m_need_merge_meshes_Q;
       m_SpaceType = other.m_SpaceType;
       m_gravity = other.m_gravity;
-      m_ISLinearKrModelQ = other.m_ISLinearKrModelQ;
       m_nThreadsMixedProblem = other.m_nThreadsMixedProblem;
       m_MortarBorderElementPresOrder = other.m_MortarBorderElementPresOrder;
       m_MortarBorderElementFluxOrder = other.m_MortarBorderElementFluxOrder;
@@ -652,7 +669,6 @@ class TMRSDataTransfer : public TMRSSavable {
              m_need_merge_meshes_Q == other.m_need_merge_meshes_Q &&
              m_SpaceType == other.m_SpaceType &&
              m_gravity == other.m_gravity &&
-             m_ISLinearKrModelQ == other.m_ISLinearKrModelQ &&
              m_nThreadsMixedProblem == other.m_nThreadsMixedProblem &&
              m_MortarBorderElementPresOrder == other.m_MortarBorderElementPresOrder &&
              m_MortarBorderElementFluxOrder == other.m_MortarBorderElementFluxOrder &&
@@ -683,7 +699,6 @@ class TMRSDataTransfer : public TMRSSavable {
       temp = m_SpaceType;
       buf.Write(&temp);
       buf.Write(m_gravity);
-      buf.Write(m_ISLinearKrModelQ);
       buf.Write(m_nThreadsMixedProblem);
       buf.Write(m_UseSubstructures_Q);
     }
@@ -713,7 +728,6 @@ class TMRSDataTransfer : public TMRSSavable {
       m_need_merge_meshes_Q = temp;
       buf.Read(&temp);
       m_SpaceType = (MSpaceType)temp;
-      buf.Read(m_ISLinearKrModelQ);
       buf.Read(&m_nThreadsMixedProblem);
       buf.Read(m_UseSubstructures_Q);
     }
@@ -739,7 +753,6 @@ class TMRSDataTransfer : public TMRSSavable {
       std::cout << m_mhm_mixed_Q << std::endl;
       std::cout << m_need_merge_meshes_Q << std::endl;
       std::cout << m_SpaceType << std::endl;
-      std::cout << m_ISLinearKrModelQ << std::endl;
       std::cout << m_nThreadsMixedProblem << std::endl;
     }
   };

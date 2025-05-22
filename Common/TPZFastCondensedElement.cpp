@@ -64,15 +64,15 @@ void TPZFastCondensedElement::CalcStiff(TPZElementMatrixT<STATE> &ek,TPZElementM
     for (int irow=0; irow<nrows; irow++) {
         ek.fMat(irow,ncols-1) *= fLambda;
     }
-    ek.fMat(nrows-1,ncols-1) *=fLambda;
-    // ek.fMat(nrows-1,ncols-1) *=fCompressibilityMatrixTerm;
+
+    ek.fMat(nrows-1,ncols-1) = fCompressibilityMatrixTerm; //this term is initially null as only the incompressible part is computed in the Contribute method
     
     TPZFNMatrix<30,STATE> solvec(fEK.fMat.Rows(),1,0.);
     GetSolutionVector(solvec);
     
 
    ef.fMat *= 1.0*Glambda;
-   ef.fMat(nrows-1) = fCompressibiilityRhsTerm;
+   ef.fMat(nrows-1) += fCompressibiilityRhsTerm; //should use the += operator since ef already has the flux divergence computed in the Contribute method
     
 //    std::cout << "Lambda " << fLambda << std::endl;
 //    ek.fMat.Print(std::cout);

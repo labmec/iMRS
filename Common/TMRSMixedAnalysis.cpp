@@ -83,7 +83,8 @@ void TMRSMixedAnalysis::Configure(int n_threads, bool UsePardiso_Q,bool UsePZ){
     }
     
    
-    //    Assemble();
+    std::cout << "Number of equations: " << fCompMesh->NEquations() << std::endl;
+    std::cout << "Number of elements: " << fCompMesh->NElements() << std::endl;
 }
 
 void TMRSMixedAnalysis::RunTimeStep(){
@@ -100,20 +101,20 @@ void TMRSMixedAnalysis::RunTimeStep(){
     REAL res_tol = m_sim_data->mTNumerics.m_res_tol_mixed;
     REAL corr_tol = m_sim_data->mTNumerics.m_corr_tol_mixed;
     
-    TPZFMatrix<STATE> dx,x(Solution());
+    TPZFMatrix<STATE> dx,x(Solution()),rhs;
     for(m_k_iteration = 1; m_k_iteration <= n; m_k_iteration++){
-       
+        std::cout << "------Newton iteration: " << m_k_iteration << std::endl;
         NewtonIteration();
         dx = Solution();
         corr_norm = Norm(dx);
-        res_norm = Norm(Rhs());
         x += dx;
         cmesh->LoadSolution(x);
         fsoltransfer.TransferFromMultiphysics();
 
         Assemble();
-      
-        res_norm = Norm(Rhs());
+        
+        rhs = Rhs();
+        res_norm = Norm(rhs);
         REAL normsol = Norm(Solution());
         
 
@@ -123,14 +124,13 @@ void TMRSMixedAnalysis::RunTimeStep(){
                 DebugStop();
         }
 #endif
-
+        std::cout << "---------Residual norm: " << res_norm << std::endl;
+        std::cout << "---------Correction norm: " << corr_norm << std::endl;
         stop_criterion_Q = res_norm < res_tol;
         stop_criterion_corr_Q = corr_norm < corr_tol;
-        if (stop_criterion_Q) {
-            std::cout << "\n\n\t================================================" << std::endl;
-            std::cout << "Mixed operator: " << std::endl;
-            std::cout << "Iterative method converged with res_norm = " << res_norm << std::endl;
-            std::cout << "Number of iterations = " << m_k_iteration << std::endl;
+        if (stop_criterion_Q || stop_criterion_corr_Q) {
+            std::cout << "------Iterative method converged with res_norm: " << res_norm << std::endl;
+            std::cout << "------Number of iterations = " << m_k_iteration << std::endl;
             fSolution = x;
             break;
         }
@@ -143,20 +143,20 @@ void TMRSMixedAnalysis::NewtonIteration(){
     if(mIsFirstAssembleQ == true)
     {
         fStructMatrix->SetNumThreads(m_sim_data->mTNumerics.m_nThreadsMixedProblem);
-        int64_t nel = fCompMesh->NElements();
-        for(int64_t el = 0; el<nel; el++)
-        {
-            TPZCompEl *cel = fCompMesh->Element(el);
-            TPZSubCompMesh *sub = dynamic_cast<TPZSubCompMesh *>(cel);
-            if(sub)
-            {
-//            int numthreads = 0;
-//                sub->SetAnalysisSparse(0); sub->Analysis()->StructMatrix()->SetNumThreads(m_sim_data->mTNumerics.m_nThreadsMixedProblem);
-//                TPZSymetricSpStructMatrixEigen matrix(sub);
-//                //matrix.SetNumThreads(n_threads);
-//                sub->Analysis()->SetStructuralMatrix(matrix);
-            }
-        }
+//         int64_t nel = fCompMesh->NElements();
+//         for(int64_t el = 0; el<nel; el++)
+//         {
+//             TPZCompEl *cel = fCompMesh->Element(el);
+//             TPZSubCompMesh *sub = dynamic_cast<TPZSubCompMesh *>(cel);
+//             if(sub)
+//             {
+// //            int numthreads = 0;
+// //                sub->SetAnalysisSparse(0); sub->Analysis()->StructMatrix()->SetNumThreads(m_sim_data->mTNumerics.m_nThreadsMixedProblem);
+// //                TPZSymetricSpStructMatrixEigen matrix(sub);
+// //                //matrix.SetNumThreads(n_threads);
+// //                sub->Analysis()->SetStructuralMatrix(matrix);
+//             }
+//         }
         mIsFirstAssembleQ=false;
     }
 
@@ -169,7 +169,7 @@ void TMRSMixedAnalysis::PostProcessTimeStep(int dimToPost, int step){
     
     const int dim = Mesh()->Dimension();
     auto start_time_pp = std::chrono::steady_clock::now();
-    cout << "\n--------------------- Post process dim = " << dimToPost << " ---------------------\n" << endl;
+    // cout << "\n--------------------- Post process dim = " << dimToPost << " ---------------------\n" << endl;
         
     TPZStack<std::string,10> scalnames, vecnames;
     
@@ -232,7 +232,7 @@ void TMRSMixedAnalysis::PostProcessTimeStep(int dimToPost, int step){
     
     
     auto total_time_pp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time_pp).count()/1000.;
-    cout << "Total time post process = " << total_time_pp << " seconds" << endl;
+    // cout << "Total time post process = " << total_time_pp << " seconds" << endl;
 
 }
 
@@ -240,25 +240,25 @@ void TMRSMixedAnalysis::Assemble(){
 
     auto start_time_ass = std::chrono::steady_clock::now();
 
-    cout << "\n---------------------- Assemble Flux Problem ----------------------" << endl;
-    cout << "Number of equations: " << fCompMesh->NEquations() << endl;
-    cout << "Number of elements: " << fCompMesh->NElements() << endl;
+    // cout << "\t\tAssemble Darcy problem" << endl;
+    // cout << "Number of equations: " << fCompMesh->NEquations() << endl;
+    // cout << "Number of elements: " << fCompMesh->NElements() << endl;
     TPZLinearAnalysis::Assemble();
 
 
     auto total_time_ass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time_ass).count()/1000.;
-    cout << "\nTotal time assemble = " << total_time_ass << " seconds" << endl;
+    std::cout << "---------Time to assemble: " << total_time_ass << " seconds" << std::endl;
 }
 
 void TMRSMixedAnalysis::Solve(){
 
     auto start_time_solve = std::chrono::steady_clock::now();
     
-    cout << "\n---------------------- Solve Flux Problem ----------------------" << endl;
+    // cout << "\n---------------------- Solve Flux Problem ----------------------" << endl;
     TPZLinearAnalysis::Solve();
     
     auto total_time_solve = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time_solve).count()/1000.;
-    cout << "Total time solve = " << total_time_solve << " seconds" << endl;
+    std::cout << "---------Time to solve: " << total_time_solve << " seconds" << std::endl;
 }
 
 void TMRSMixedAnalysis::VerifyElementFluxes(){

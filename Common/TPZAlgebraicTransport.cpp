@@ -108,7 +108,7 @@ void TPZAlgebraicTransport::ContributeInterface(int index, TPZFMatrix<double> &e
     ek(1,1) = -1.0*dfwSw_R * (1-beta)*fluxint* fdt;
    
 //    Gravity fluxes contribution
-//    ContributeInterfaceIHU(index, ek, ef);
+   ContributeInterfaceIHU(index, ek, ef);
 }
 
 void TPZAlgebraicTransport::ContributeInterfaceResidual(int index, TPZFMatrix<double> &ef, int interfaceID){
@@ -129,7 +129,7 @@ void TPZAlgebraicTransport::ContributeInterfaceResidual(int index, TPZFMatrix<do
     ef(1) = -1.0*(beta*fw_L  + (1-beta)*fw_R)*fluxint* fdt;
     
 // Gravity fluxes contribution
-//    ContributeInterfaceIHUResidual(index, ef);
+   ContributeInterfaceIHUResidual(index, ef);
     
 #ifdef PZDEBUG
     if(std::isnan(Norm(ef)))
@@ -204,10 +204,10 @@ void TPZAlgebraicTransport::ContributeInterfaceIHU(int index, TPZFMatrix<double>
     REAL K_z = 2.0*(Kz_L * Kz_R)/(Kz_L + Kz_R);
     
     // Beacuse we assume diagonal abs. perm tensor
-    REAL K_times_g_dot_n = (K_x*n[0]*fgravity[0]+K_y*n[1]*fgravity[1]+K_z*n[2]*fgravity[2]);
+    REAL K_times_g_dot_n = (K_x * n[0] * fgravity[0] + K_y * n[1] * fgravity[1] + K_z * n[2] * fgravity[2]);
     
-    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL);
-    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR);
+    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
+    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
     ef(0) += res1;
     ef(1) -= res2;
     
@@ -216,11 +216,11 @@ void TPZAlgebraicTransport::ContributeInterfaceIHU(int index, TPZFMatrix<double>
     REAL dGRdSL = fstarR.second.first * (lamba_w_starR.first + lamba_o_starR.first) + fstarR.first * (lamba_w_starR.second.first + lamba_o_starR.second.first);
     REAL dGRdSR = fstarR.second.second * (lamba_w_starR.first + lamba_o_starR.first) + fstarR.first * (lamba_w_starR.second.second + lamba_o_starR.second.second);
     
-    ek(0,0) += dGLdSL * K_times_g_dot_n * (rho_wL - rho_oL);
-    ek(0,1) += dGLdSR * K_times_g_dot_n * (rho_wL - rho_oL);
+    ek(0,0) += dGLdSL * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
+    ek(0,1) += dGLdSR * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
     
-    ek(1,1) -= dGRdSL * K_times_g_dot_n * (rho_wR - rho_oR);
-    ek(1,0) -= dGRdSR * K_times_g_dot_n * (rho_wR - rho_oR);
+    ek(1,1) -= dGRdSL * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
+    ek(1,0) -= dGRdSR * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
 }
 
 void TPZAlgebraicTransport::ContributeInterfaceIHUResidual(int index, TPZFMatrix<double> &ef){
@@ -290,8 +290,8 @@ void TPZAlgebraicTransport::ContributeInterfaceIHUResidual(int index, TPZFMatrix
     // Beacuse we assume diagonal abs. perm tensor
     REAL K_times_g_dot_n = (K_x*n[0]*fgravity[0]+K_y*n[1]*fgravity[1]+K_z*n[2]*fgravity[2]);
     
-    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL);
-    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR);
+    REAL res1 = fstarL.first * (lamba_w_starL.first + lamba_o_starL.first) * K_times_g_dot_n * (rho_wL - rho_oL) * fdt;
+    REAL res2 = fstarR.first * (lamba_w_starR.first + lamba_o_starR.first) * K_times_g_dot_n * (rho_wR - rho_oR) * fdt;
     ef(0) += res1;
     ef(1) -= res2;
 
@@ -343,11 +343,18 @@ void TPZAlgebraicTransport::ContributeBCInterface(int index,TPZFMatrix<double> &
 
     REAL fluxint = fInterfaceData[matid].fIntegralFlux[index];
     REAL zerotol = 1.e-10;
+    REAL rhoWRef = fCellsData.fsim_data->mTFluidProperties.mWaterDensityRef;
+    REAL rhoORef = fCellsData.fsim_data->mTFluidProperties.mOilDensityRef;
     int type = fboundaryCMatVal[matid].first;
     const bool noflux = (fabs(fluxint) < zerotol && type == 1) ? true : false;
     if (fluxint < 0.0 && !noflux){ //inlet
         REAL s_inlet = fboundaryCMatVal[matid].second; //external saturation
-        ef(0,0) = s_inlet*fluxint*fdt;
+        //What is correct: to use the inlet saturation or the fractional flow at the inlet?
+        int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
+        // krmodel = 0; //using the inlet saturation direcly
+        auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
+        REAL fw_inlet = std::get<0>(fwf(s_inlet, rhoWRef, rhoORef));
+        ef(0,0) = fw_inlet*fluxint*fdt;
     }
     else if (!noflux){ //outlet
 
@@ -453,30 +460,25 @@ void TPZAlgebraicTransport::TInterfaceDataTransport::Print(std::ostream &out){
 void TPZAlgebraicTransport::TCellData::SetDataTransfer(TMRSDataTransfer *simdata){
     fsim_data = simdata;
 }
-void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(bool isLinearQ){
+void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(int krModel){
     
-    if (!isLinearQ) {
-        fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
-    }
-    else{
-        fsim_data->mTPetroPhysics.CreateLinearKrModel();
-    }
-    
-    auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW;
-    auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO;
-    auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal;
-    auto fwf = fsim_data->mTPetroPhysics.mFw;
-    auto fof = fsim_data->mTPetroPhysics.mFo;
+    auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW[krModel];
+    auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO[krModel];
+    auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal[krModel];
+    auto fwf = fsim_data->mTPetroPhysics.mFw[krModel];
+    auto fof = fsim_data->mTPetroPhysics.mFo[krModel];
     
     int nvols = this->fVolume.size();
     for (int ivol =0 ; ivol< nvols; ivol++) {
 
         REAL sw = this->fSaturation[ivol];
-        auto fwfvalderiv = fwf(sw);
-        auto fovalderiv  = fof(sw);
-        auto lambdaWvalderiv = labdaWf(sw);
-        auto lambdaOvalderiv = labdaOf(sw);
-        auto lambdaTotalvalderiv = lambdaTotalf(sw);
+        REAL rhow = this->fDensityWater[ivol];
+        REAL rhoo = this->fDensityOil[ivol];
+        auto fwfvalderiv = fwf(sw, rhow, rhoo);
+        auto fovalderiv  = fof(sw, rhow, rhoo);
+        auto lambdaWvalderiv = labdaWf(sw, rhow);
+        auto lambdaOvalderiv = labdaOf(sw, rhoo);
+        auto lambdaTotalvalderiv = lambdaTotalf(sw, rhow, rhoo);
         
         this->fWaterfractionalflow[ivol] = std::get<0>(fwfvalderiv);
         this->fDerivativeWfractionalflow[ivol] = std::get<1>(fwfvalderiv);
@@ -492,25 +494,27 @@ void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambda(bool isLin
 
 void TPZAlgebraicTransport::TCellData::UpdateFractionalFlowsAndLambdaQuasiNewton(){
     
-        fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
+    //Essa funcao tá estranha, lembrar de checar
+        int krModel = fsim_data->mTPetroPhysics.mKrModel;
         int nvols = this->fVolume.size();
-        auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW;
-        auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO;
-        auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal;
-        auto fwf = fsim_data->mTPetroPhysics.mFw;
-        auto fof = fsim_data->mTPetroPhysics.mFo;
+        auto labdaWf = fsim_data->mTPetroPhysics.mLambdaW[krModel];
+        auto labdaOf = fsim_data->mTPetroPhysics.mLambdaO[krModel];
+        auto lambdaTotalf = fsim_data->mTPetroPhysics.mLambdaTotal[krModel];
+        auto fwf = fsim_data->mTPetroPhysics.mFw[krModel];
+        auto fof = fsim_data->mTPetroPhysics.mFo[krModel];
     
-        fsim_data->mTPetroPhysics.CreateQuadraticKrModel();
-        auto fwLinearf =fsim_data->mTPetroPhysics.mFo;
+        auto fwLinearf =fsim_data->mTPetroPhysics.mFo[0]; //linear krmodel
     
         for (int ivol =0 ; ivol< nvols; ivol++) {
             REAL sw = this->fSaturation[ivol];
-            auto fwfvalderiv = fwf(sw);
-            auto fwflinearvalderiv = fwLinearf(sw);
-            auto fovalderiv  = fof(sw);
-            auto lambdaWvalderiv = labdaWf(sw);
-            auto lambdaOvalderiv = labdaOf(sw);
-            auto lambdaTotalvalderiv = lambdaTotalf(sw);
+            REAL rhow = this->fDensityWater[ivol];
+            REAL rhoo = this->fDensityOil[ivol];
+            auto fwfvalderiv = fwf(sw, rhow, rhoo);
+            auto fwflinearvalderiv = fwLinearf(sw, rhow, rhoo);
+            auto fovalderiv  = fof(sw, rhow, rhoo);
+            auto lambdaWvalderiv = labdaWf(sw, rhow);
+            auto lambdaOvalderiv = labdaOf(sw, rhoo);
+            auto lambdaTotalvalderiv = lambdaTotalf(sw, rhow, rhoo);
             this->fWaterfractionalflow[ivol] = std::get<0>(fwfvalderiv);
             this->fOilfractionalflow[ivol] = std::get<0>(fovalderiv);
             this->fDerivativeOfractionalflow[ivol] = std::get<1>(fovalderiv);
@@ -555,7 +559,6 @@ void TPZAlgebraicTransport::TCellData::UpdateMixedDensity(){
     }
 }
 void TPZAlgebraicTransport::TCellData::UpdateDensities(){
-    UpdateDensitiesLastState();
     int ncells = fVolume.size();
     auto fWaterDensityF = fsim_data->mTFluidProperties.mWaterDensityF;
     auto fOilDensityF = fsim_data->mTFluidProperties.mOilDensityF;
@@ -564,6 +567,11 @@ void TPZAlgebraicTransport::TCellData::UpdateDensities(){
         REAL pressure = fPressure[icell];
         auto densityWvalderiv = fWaterDensityF(pressure);
         auto densityOvalderiv = fOilDensityF(pressure);
+        #ifdef PZDEBUG
+        if (std::get<0>(densityWvalderiv) < 0.0 || std::get<0>(densityOvalderiv) < 0.0) {
+            DebugStop();
+        }
+        #endif
         fDensityWater[icell] = std::get<0>(densityWvalderiv);
         fdDensityWaterdp[icell]= std::get<1>(densityWvalderiv);
         fDensityOil[icell] = std::get<0>(densityOvalderiv);
@@ -660,14 +668,21 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
                 fluxIntegratedNoFlux += int_saturation*fluxint*fdt;
             }
             else if (fluxint < 0.0) { //inlet
-                REAL ext_saturation = fboundaryCMatVal[matid].second;
-                fluxIntegratedInlet += ext_saturation*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
+                REAL s_inlet = fboundaryCMatVal[matid].second;
+                REAL rhoWRef = fCellsData.fsim_data->mTFluidProperties.mWaterDensityRef;
+                REAL rhoORef = fCellsData.fsim_data->mTFluidProperties.mOilDensityRef;
+                int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
+                // krmodel = 0; //using the inlet saturation direcly
+                auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
+                REAL fw_inlet = std::get<0>(fwf(s_inlet, rhoWRef, rhoORef));
+                fluxIntegratedInlet += fw_inlet*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
             }
             else { //outlet
                 std::pair<int64_t, int64_t> left_right = fInterfaceData[matid].fLeftRightVolIndex[i];
                 int64_t cell_id = left_right.first;
                 REAL int_saturation = fCellsData.fSaturation[cell_id];
-                fluxIntegratedOutlet += int_saturation*fluxint*fdt;
+                REAL fwL = fCellsData.fWaterfractionalflow[cell_id];
+                fluxIntegratedOutlet += fwL*fluxint*fdt;
             }
         }
     }
@@ -697,28 +712,26 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
     // }
 
     REAL massConservation = fluxIntegratedInlet + intMass + fluxIntegratedOutlet - initialMass;
-    std::cout << "\n ------------------ Global Conservation Diagnostics ------------------" << std::endl;
-    std::cout << "Inlet mass: " << std::setprecision(14) << fluxIntegratedInlet << std::endl;
-    std::cout << "Outlet mass: " << fluxIntegratedOutlet << std::endl;
-    std::cout << "Inlet - Outlet: " << fluxIntegratedInlet + fluxIntegratedOutlet << std::endl;
+    std::cout << "\nGlobal Conservation Diagnostics" << std::endl;
+    std::cout << "---Inlet mass: " << std::setprecision(14) << fluxIntegratedInlet << std::endl;
+    std::cout << "---Outlet mass: " << fluxIntegratedOutlet << std::endl;
+    std::cout << "---Inlet - Outlet: " << fluxIntegratedInlet + fluxIntegratedOutlet << std::endl;
     if(fabs(fluxIntegratedNoFlux) > 1.e-10 ){
-        std::cout << "=====> WARNING! Flux through no flux bc is significant. Total = " << fluxIntegratedNoFlux << std::endl;
+        std::cout << "---WARNING! Flux through no flux bc is significant: " << fluxIntegratedNoFlux << std::endl;
     }
     else{
-        std::cout << "NoFlux mass: " << fluxIntegratedNoFlux << std::endl;
+        std::cout << "---NoFlux mass: " << fluxIntegratedNoFlux << std::endl;
     }    
-    std::cout << "System mass: " << intMass << std::endl;
-    std::cout << "Initial mass: " << initialMass << std::endl;
-    std::cout << "System mass - Initial mass: " << intMass - initialMass << std::endl;
-    std::cout << "Accumulated outlet mass: " << massOut << std::endl;
+    std::cout << "---System mass: " << intMass << std::endl;
+    std::cout << "---Initial mass: " << initialMass << std::endl;
+    std::cout << "---System mass - Initial mass: " << intMass - initialMass << std::endl;
+    std::cout << "---Accumulated outlet mass: " << massOut << std::endl;
 
     if(std::abs(massConservation) < 1.0e-8 ){
-        std::cout << "\t===> Global mass conservation is ok! Total massLoss = " << std::setprecision(14) << massConservation << std::endl;
+        std::cout << "---Global mass conservation is ok! Total mass loss: " << std::setprecision(14) << massConservation << std::endl;
     }
     else{
-        std::cout << "\t====> ERROR! Global mass conservation NOT ok! <=====" << std::endl;
-        std::cout << "Global mass loss: " << std::setprecision(14) << massConservation << std::endl;
-        DebugStop();
+        std::cout << "---WARNING! Global mass conservation NOT ok! Total mass loss: " << std::setprecision(14) << massConservation << std::endl;
     }
     massOut += fluxIntegratedOutlet;
     initialMass = intMass; //initialMass now stands for the mass at the end of the previous time step
