@@ -4,7 +4,7 @@ rin = 30.15; //sandscreen tube radius
 rout = 30.15+345; //external radius
 h = 1000; //height
 
-ref =7;
+ref =1;
 xnels = 2^ref;
 ynels = 2^ref; 
 
