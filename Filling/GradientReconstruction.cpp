@@ -489,7 +489,7 @@ std:
 void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol) {
   int dim = gel->Mesh()->Dimension();
     std::cout<<"************ TEST NEIGHS ************"<<std::endl;
-    cout<<"idcell= "<<gel->Index()<<endl;
+    cout<<"index geometric element = "<<gel->Index()<<endl;
   TPZCompEl *cel = gel->Reference();
   if(!cel) DebugStop();
   TPZCompMesh *cmesh = cel->Mesh();
@@ -508,6 +508,7 @@ void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>
       if(celside) celstack.Push(celside);
     }
     std::set<int64_t> elindices;
+    elindices.insert(gel->Index());
 
     
     for(auto it : celstack) {
@@ -520,7 +521,7 @@ void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>
       elindices.insert(index);
       TPZVec<REAL> center(3,0.);
       TPZVec<REAL> centerNeigh(3,0.);
-      TPZGeoElSide gelside = it.Reference();
+      TPZGeoElSide gelside(gel);
       TPZVec<REAL> masscent(gelside.Dimension(),0.);
       gelside.CenterPoint(masscent);
       gelside.X(masscent, centerNeigh);
