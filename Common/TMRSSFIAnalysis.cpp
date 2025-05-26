@@ -391,7 +391,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
         SFIIteration();        
         error_rel_mixed = Norm(m_x_mixed - m_mixed_module->Solution())/Norm(m_mixed_module->Solution());
         
-        if(iszero(Norm(m_transport_module->Solution()))){
+        if(IsZero(Norm(m_transport_module->Solution()))){
             error_rel_transport = Norm(m_x_transport - m_transport_module->Solution());
         }else{
             error_rel_transport = Norm(m_x_transport - m_transport_module->Solution())/Norm(m_transport_module->Solution());

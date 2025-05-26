@@ -53,12 +53,16 @@ auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<
   REAL y = coord[1];
   REAL z = coord[2];
 
-  rhsVal[0] = cos(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
-  matVal.Resize(3, 1);
-  matVal(0, 0) = -0.5 * M_PI * sin(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
-  matVal(1, 0) = -0.5 * M_PI * cos(M_PI * 0.5 * x) * sin(M_PI * 0.5 * y);
-  matVal(2, 0) = 0.0;
-    
+//  rhsVal[0] = std::exp(-(x * x + y * y));
+//  matVal.Resize(3, 1);
+//  matVal(0, 0) = -2.0 * x * std::exp(-(x * x + y * y));
+//  matVal(1, 0) = -2.0 * y * std::exp(-(x * x + y * y));
+//  matVal(2, 0) = 0.0;
+    rhsVal[0] = cos(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
+    matVal.Resize(3, 1);
+    matVal(0, 0) =  -0.5 * M_PI * sin(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
+    matVal(1, 0) = -0.5 * M_PI * cos(M_PI * 0.5 * x) * sin(M_PI * 0.5 * y);
+    matVal(2, 0) = 0.0;
     
   int stop = 2;
 };
@@ -101,85 +105,85 @@ int main(int argc, char *argv[])
   std::ofstream out("gmesh_up.vtk");
   TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
 
-//    int ngels = gmesh->NElements();
-//    int dim = gmesh->Dimension();
-//    for (int i = 0; i<ngels; i++) {
-//        TPZGeoEl *gel = gmesh->Element(i);
-//
-//        if (gel->Dimension()==dim) {
-//            TPZVec<TPZGeoEl *> child;
-//            gel->Divide(child);
-//            break;
-//        }
-//    }
-//    std::ofstream outE("gmesh_edit.vtk");
-//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, outE);
+    int ngels = gmesh->NElements();
+    int dim = gmesh->Dimension();
+    for (int i = 0; i<ngels; i++) {
+        TPZGeoEl *gel = gmesh->Element(i);
+
+        if (gel->Dimension()==dim) {
+            TPZVec<TPZGeoEl *> child;
+            gel->Divide(child);
+            break;
+        }
+    }
+    std::ofstream outE("gmesh_edit.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, outE);
 
     
-  auto cmesh = CreateCMesh(gmesh, solution);
-  TPZManVector<REAL, 3> errorsum(3, 0.);
-  cmesh->ElementSolution().Redim(cmesh->NElements(),3);
-  cmesh->EvaluateError(true, errorsum);
-  std::cout << "Errorsum constant approx: " << errorsum[0] << " " << errorsum[1] << " " << errorsum[2] << std::endl;
-  ComputeGradients(cmesh);
-  errorsum.Fill(0.);
-  cmesh->EvaluateError(true, errorsum);
-  std::cout << "Errorsum reconstructed: " << errorsum[0] << " " << errorsum[1] << " " << errorsum[2] << std::endl;
+//  auto cmesh = CreateCMesh(gmesh, solution);
+//  TPZManVector<REAL, 3> errorsum(3, 0.);
+//  cmesh->ElementSolution().Redim(cmesh->NElements(),3);
+//  cmesh->EvaluateError(true, errorsum);
+//  std::cout << "Errorsum constant approx: " << errorsum[0] << " " << errorsum[1] << " " << errorsum[2] << std::endl;
+//  ComputeGradients(cmesh);
+//  errorsum.Fill(0.);
+//  cmesh->EvaluateError(true, errorsum);
+//  std::cout << "Errorsum reconstructed: " << errorsum[0] << " " << errorsum[1] << " " << errorsum[2] << std::endl;
     
     TPZVec<REAL> error_m_1;
     ofstream out_m("gmesh_refined_0.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m);
     EvaluateError(gmesh, solution, error_m_1);
     
-//  Refine
-    TPZCheckGeom geom(gmesh);
-    geom.UniformRefine(1);
-    ofstream out_m1("gmesh_refined_1.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m1);
-    TPZVec<REAL> error_m_2;
-    EvaluateError(gmesh, solution, error_m_2);
-    
-    TPZCheckGeom geom1(gmesh);
-    geom1.UniformRefine(1);
-    ofstream out_m2("gmesh_refined_2.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m2);
-    TPZVec<REAL> error_m_3;
-    EvaluateError(gmesh, solution, error_m_3);
-    
-    TPZCheckGeom geom2(gmesh);
-    geom2.UniformRefine(1);
-    ofstream out_m3("gmesh_refined_3.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m3);
-    TPZVec<REAL> error_m_4;
-    EvaluateError(gmesh, solution, error_m_4);
-    
-    TPZCheckGeom geom3(gmesh);
-    geom3.UniformRefine(1);
-    ofstream out_m4("gmesh_refined_4.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m4);
-    TPZVec<REAL> error_m_5;
-    EvaluateError(gmesh, solution, error_m_5);
-    
-    TPZCheckGeom geom4(gmesh);
-    geom4.UniformRefine(1);
-    ofstream out_m5("gmesh_refined_5.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m5);
-    TPZVec<REAL> error_m_6;
-    EvaluateError(gmesh, solution, error_m_6);
-    
-    TPZCheckGeom geom5(gmesh);
-    geom5.UniformRefine(1);
-    ofstream out_m6("gmesh_refined_5.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m6);
-    TPZVec<REAL> error_m_7;
-    EvaluateError(gmesh, solution, error_m_7);
-    
-    ofstream errortxt("error.txt");
-    errortxt<<error_m_1[0]<< " " <<error_m_2[0]<<" "<<error_m_3[0]<<" "<<error_m_4[0]<<" "<<error_m_5[0]<<" "<<" "<<error_m_4[0]<<" "<<error_m_5[0]<<" ";
-    errortxt.close();
-    ofstream GRerrortxt("GRerror.txt");
-    GRerrortxt<<error_m_1[1]<< " " <<error_m_2[1]<<" "<<error_m_3[1]<<" "<<error_m_4[1]<<" "<<error_m_5[1]<<" "<<" "<<error_m_4[1]<<" "<<error_m_5[1]<<" ";
-    GRerrortxt.close();
+//////  Refine
+//    TPZCheckGeom geom(gmesh);
+//    geom.UniformRefine(1);
+//    ofstream out_m1("gmesh_refined_1.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m1);
+//    TPZVec<REAL> error_m_2;
+//    EvaluateError(gmesh, solution, error_m_2);
+//
+//    TPZCheckGeom geom1(gmesh);
+//    geom1.UniformRefine(1);
+//    ofstream out_m2("gmesh_refined_2.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m2);
+//    TPZVec<REAL> error_m_3;
+//    EvaluateError(gmesh, solution, error_m_3);
+//
+//    TPZCheckGeom geom2(gmesh);
+//    geom2.UniformRefine(1);
+//    ofstream out_m3("gmesh_refined_3.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m3);
+//    TPZVec<REAL> error_m_4;
+//    EvaluateError(gmesh, solution, error_m_4);
+//
+//    TPZCheckGeom geom3(gmesh);
+//    geom3.UniformRefine(1);
+//    ofstream out_m4("gmesh_refined_4.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m4);
+//    TPZVec<REAL> error_m_5;
+//    EvaluateError(gmesh, solution, error_m_5);
+//
+//    TPZCheckGeom geom4(gmesh);
+//    geom4.UniformRefine(1);
+//    ofstream out_m5("gmesh_refined_5.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m5);
+//    TPZVec<REAL> error_m_6;
+//    EvaluateError(gmesh, solution, error_m_6);
+//
+//    TPZCheckGeom geom5(gmesh);
+//    geom5.UniformRefine(1);
+//    ofstream out_m6("gmesh_refined_5.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m6);
+//    TPZVec<REAL> error_m_7;
+//    EvaluateError(gmesh, solution, error_m_7);
+//
+//    ofstream errortxtF3("errorf3.txt");
+//    errortxtF3<<error_m_1[0]<< " " <<error_m_2[0]<<" "<<error_m_3[0]<<" "<<error_m_4[0]<<" "<<error_m_5[0]<<" "<<" "<<error_m_4[0]<<" "<<error_m_5[0]<<" ";
+//    errortxtF3.close();
+//    ofstream GRerrortxtF3("GRerrorf3.txt");
+//    GRerrortxtF3<<error_m_1[1]<< " " <<error_m_2[1]<<" "<<error_m_3[1]<<" "<<error_m_4[1]<<" "<<error_m_5[1]<<" "<<" "<<error_m_4[1]<<" "<<error_m_5[1]<<" ";
+//    GRerrortxtF3.close();
    
     
     
@@ -484,6 +488,8 @@ std:
 
 void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol) {
   int dim = gel->Mesh()->Dimension();
+    std::cout<<"************ TEST NEIGHS ************"<<std::endl;
+    cout<<"idcell= "<<gel->Index()<<endl;
   TPZCompEl *cel = gel->Reference();
   if(!cel) DebugStop();
   TPZCompMesh *cmesh = cel->Mesh();
@@ -502,6 +508,8 @@ void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>
       if(celside) celstack.Push(celside);
     }
     std::set<int64_t> elindices;
+
+    
     for(auto it : celstack) {
       TPZCompEl *cel = it.Element();
       if(!cel) DebugStop();
@@ -521,6 +529,8 @@ void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>
       int64_t pos = block.Position(seqnum);
       int nshape = connect.NShape();
       REAL cellSol = sol(pos+nshape-1,0);
+        std::cout<<"idNeg= "<<gel->Index()<<" SkNeig= "<<cellSol<<" CenterN= "<<centerNeigh[0]<<" "<<centerNeigh[1]<<endl;
+        
       CenterAndSol.push_back(std::make_pair(centerNeigh, cellSol));
     }
   }
@@ -703,7 +713,7 @@ REAL GradientLimiter(TPZGeoEl *gel, REAL cellSol, TPZVec<REAL> &gradCell, TPZSta
     }
   }
 
-  TPZVec<REAL> allYs;
+	  TPZVec<REAL> allYs;
   REAL yval;
 
   for (int i = 0; i < nnodes; i++)
@@ -818,6 +828,7 @@ TPZCompMesh *CreateCMesh(TPZGeoMesh *gmesh, const ExactSolFunc &ExactSolution)
     int64_t ncel = cmesh->NElements();
     TPZBlock &block = cmesh->Block();
     TPZFMatrix<REAL> &sol = cmesh->Solution();
+      std::cout<<"Sk Solutions"<<std::endl;
 
     for (int64_t i = 0; i < ncel; i++)
     {
@@ -827,6 +838,7 @@ TPZCompMesh *CreateCMesh(TPZGeoMesh *gmesh, const ExactSolFunc &ExactSolution)
         TPZGeoEl *gel = cel->Reference();
         int gelindex = gel->Index();
         REAL cellSol = AllCelAverage[gelindex];
+          std::cout<<" idcell= "<<gelindex<<"  cellSol= "<<cellSol<<endl;
 
         int ncon = cel->NConnects();
         if(ncon != 1)
@@ -878,6 +890,8 @@ void ComputeGradients(TPZCompMesh *cmesh) {
       continue;
     }
     TPZGeoEl *gel = cel->Reference();
+      cout<<"********************************************"<<endl;
+      std::cout<<"idgel= "<<gel->Index()<<endl;
     int geldim = gel->Dimension();
     if (geldim != mdim) {
       continue;
@@ -895,7 +909,11 @@ void ComputeGradients(TPZCompMesh *cmesh) {
     GetNeigsCenterAndSol(gel, CenterAndSol);
     TPZVec<REAL> GradientSol;
     GradientCell(centerCell, CellSol, CenterAndSol, GradientSol, mdim);
+    
+    cout<<"gradx= "<<GradientSol[0]<<"  grady= "<<GradientSol[1]<<endl;
     REAL AlphaK = GradientLimiter(gel, CellSol, GradientSol, CenterAndSol);
+    cout<<"AlphaK= "<<AlphaK<<endl;
+      
     TPZConnect &con = cel->Connect(0);
     int64_t seqnum = con.SequenceNumber();
     int blsize = block.Size(seqnum);
