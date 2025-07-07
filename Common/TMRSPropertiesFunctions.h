@@ -10,15 +10,16 @@
 
 #include "pzreal.h"
 #include "TRMSpatialPropertiesMap.h"
+#include <random>
 
 class TMRSPropertiesFunctions
 {
     public:
     
     /// Enumerate defining the function type
-    enum EFunctionType { EConstantFunction = 0, EPiecewiseFunction = 1, ECircleLevelSetFunction = 2, EUNISIMFunction = 3, ESPECase10Function = 4};
-    
-    
+    enum EFunctionType { EConstantFunction = 0, EPiecewiseFunction = 1, ECircleLevelSetFunction = 2, EUNISIMFunction = 3, ESPECase10Function = 4, ERandomCirclesFunction = 5 };
+
+
     TMRSPropertiesFunctions(){
         m_function_type_kappa = EConstantFunction;
         m_function_type_phi = EConstantFunction;
@@ -361,7 +362,7 @@ class TMRSPropertiesFunctions
                         };
                 }
                 break;
-                case EPiecewiseFunction:
+            case EPiecewiseFunction:
                 {
                     return [] (const TPZVec<REAL> & pt) -> REAL {
                             REAL y,s;
@@ -373,6 +374,55 @@ class TMRSPropertiesFunctions
                              }
                              return s;
                         };
+                }
+                break;
+            case ERandomCirclesFunction:
+                {
+                    // Parameters for the domain and circles
+                    const REAL inner_radius = 30.15; // mm
+                    const REAL outer_radius = inner_radius + 345.0; // mm
+                    const REAL domain_height = 1000.0; // mm
+                    const int min_circles = 50;
+                    const int max_circles = 100;
+                    const REAL max_radius = 10.0;
+
+                    // Generate random circles only once
+                    static bool initialized = false;
+                    static std::vector<std::tuple<REAL, REAL, REAL>> circles; // (center_x, center_y, radius)
+                    if (!initialized) {
+                        initialized = true;
+                        std::random_device rd;
+                        std::mt19937 gen(rd());
+                        std::uniform_int_distribution<> n_dist(min_circles, max_circles);
+                        std::uniform_real_distribution<REAL> x_dist(inner_radius, outer_radius);
+                        std::uniform_real_distribution<REAL> y_dist(0.0, domain_height);
+                        std::uniform_real_distribution<REAL> r_dist(1.0, max_radius);
+
+                        int n_circles = n_dist(gen);
+                        circles.reserve(n_circles);
+                        for (int i = 0; i < n_circles; ++i) {
+                            REAL cx = x_dist(gen);
+                            REAL cy = y_dist(gen);
+                            REAL r = r_dist(gen);
+                            circles.emplace_back(cx, cy, r);
+                        }
+                    }
+
+                    return [] (const TPZVec<REAL> & pt) -> REAL {
+                        REAL x = pt[0];
+                        REAL y = pt[1];
+                        for (const auto& circle : circles) {
+                            REAL cx = std::get<0>(circle);
+                            REAL cy = std::get<1>(circle);
+                            REAL r = std::get<2>(circle);
+                            REAL dx = x - cx;
+                            REAL dy = y - cy;
+                            if (dx*dx + dy*dy <= r*r) {
+                                return 0.0;
+                            }
+                        }
+                        return 1.0;
+                    };
                 }
                 break;
             default:
