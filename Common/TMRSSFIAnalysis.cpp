@@ -465,7 +465,7 @@ void TMRSSFIAnalysis::SFIIteration(){
     
     std::cout << "---Running Transport problem" << std::endl;
     // Solves the transport problem
-    //m_transport_module->RunTimeStep();
+    m_transport_module->RunTimeStep();
     
     std::cout << "SFIIteration time: " << timer_sfi.ReturnTimeDouble()/1000 << " seconds" << std::endl;
 }

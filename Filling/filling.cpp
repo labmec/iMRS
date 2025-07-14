@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/test-1d-vacuum", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/random-bubbles", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -156,6 +156,7 @@ int main(int argc, char* argv[]) {
     const int typeToPPinit = 0;   // 0: both, 1: p/flux, 2: saturation
     const int typeToPPsteps = 0;  // 0: both, 1: p/flux, 2: saturation
 
+    sfi_analysis->PostProcessTimeStep(typeToPPinit, mp_cmesh->Dimension(), 0);
     // Looping over time steps
     for (int it = 1; it <= n_steps; it++) {
       std::cout << "\n=================================================================" << std::endl;
@@ -400,13 +401,13 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   sim_data.mTNumerics.m_sfi_tol = 0.00000001;
   sim_data.mTNumerics.m_res_tol_transport = 0.00000001;
   sim_data.mTNumerics.m_corr_tol_transport = 0.00000001;
-  sim_data.mTNumerics.m_res_tol_mixed = 0.00000001;
-  sim_data.mTNumerics.m_corr_tol_mixed = 0.00000001;
+  sim_data.mTNumerics.m_res_tol_mixed = 1.e-10;
+  sim_data.mTNumerics.m_corr_tol_mixed = 1.e-10;
   sim_data.mTNumerics.m_four_approx_spaces_Q = true;
   sim_data.mTNumerics.m_nThreadsMixedProblem = glob_n_threads;
-  sim_data.mTNumerics.m_max_iter_sfi = 20;
-  sim_data.mTNumerics.m_max_iter_mixed = 20;
-  sim_data.mTNumerics.m_max_iter_transport = 20;
+  sim_data.mTNumerics.m_max_iter_sfi = 3;
+  sim_data.mTNumerics.m_max_iter_mixed = 10;
+  sim_data.mTNumerics.m_max_iter_transport = 10;
 
   sim_data.mTPostProcess.m_file_name_mixed = "postdarcy.vtk";
   sim_data.mTPostProcess.m_file_name_transport = "posttransport.vtk";

@@ -348,12 +348,12 @@ class TMRSPropertiesFunctions
                 {
                     return [] (const TPZVec<REAL> & pt) -> REAL {
                             REAL x,y,s,r,c,f;
-                            r = 0.25;
-                            c = 10;
+                            r = 150.0; // mm
+                            c = 0;
                             x = pt[0];
                             y = pt[1];
-                            f = -r*r + (-5 + x)*(-5 + x) + (-5 + y)*(-5 + y) - c;
-                            if(f>0){
+                            f = -r*r + (-202.65 + x)*(-202.65 + x) + (-800 + y)*(-800 + y) - c;
+                            if(f<0){
                                 s = 0.0;
                             }else{
                                 s = 1.0;
@@ -367,10 +367,12 @@ class TMRSPropertiesFunctions
                     return [] (const TPZVec<REAL> & pt) -> REAL {
                             REAL y,s;
                             y = pt[1];
-                            if(y<5){
-                                 s = 0.0;
-                             }else{
-                                 s = 1.0;
+                            if(y<0.3){
+                                s = 1.0;
+                            }else if (y>=0.3 && y<0.7){
+                                s = 0.0;
+                            }else{
+                                s = 1.0;
                              }
                              return s;
                         };

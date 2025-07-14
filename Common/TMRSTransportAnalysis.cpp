@@ -620,11 +620,15 @@ void TMRSTransportAnalysis::PostProcessTimeStep(){
 //#endif
     int nels = fGeoMesh->NElements();
     fCompMesh->LoadReferences();
-    TPZVec<REAL> elData(nels,0);
+    TPZVec<TPZVec<REAL>> elData(nels);
+    for (int i = 0; i < nels; i++) {
+        elData[i].Resize(2, 0.0); // two scalars: saturation and density
+    }
     int ncells = fAlgebraicTransport.fCellsData.fVolume.size();
     for (int icell = 0; icell< ncells; icell++) {
         int indexGeo = fAlgebraicTransport.fCellsData.fGeoIndex[icell];
         REAL sat= fAlgebraicTransport.fCellsData.fSaturation[icell];
+        REAL airdensity = fAlgebraicTransport.fCellsData.fDensityOil[icell];
         auto center = fAlgebraicTransport.fCellsData.fCenterCoordinate[icell];
         TPZGeoEl *gel = fCompMesh->Reference()->Element(indexGeo);
         if(!gel) DebugStop();
@@ -645,12 +649,13 @@ void TMRSTransportAnalysis::PostProcessTimeStep(){
         }
 # endif
         if(fabs(sat) < 1e-20) sat = 0.;
-        elData[indexGeo]=sat;
+        elData[indexGeo][0]=sat;
+        elData[indexGeo][1]=airdensity;
     }
     
     std::string fileAdjusted = file.substr(0,file.find("vtk")) + std::to_string(fpostprocessindex) + ".vtk";
-    std::ofstream file_ofstream(fileAdjusted);
-    TPZVTKGeoMesh::PrintGMeshVTK(fCompMesh->Reference(), file_ofstream, elData);
+    char* filename = const_cast<char *>(fileAdjusted.c_str());
+    TPZVTKGeoMesh::PrintGMeshVTK(fCompMesh->Reference(), filename, elData);
     fpostprocessindex++;
 }
 
