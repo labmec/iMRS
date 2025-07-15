@@ -405,7 +405,7 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   sim_data.mTNumerics.m_corr_tol_mixed = 1.e-10;
   sim_data.mTNumerics.m_four_approx_spaces_Q = true;
   sim_data.mTNumerics.m_nThreadsMixedProblem = glob_n_threads;
-  sim_data.mTNumerics.m_max_iter_sfi = 3;
+  sim_data.mTNumerics.m_max_iter_sfi = 10;
   sim_data.mTNumerics.m_max_iter_mixed = 10;
   sim_data.mTNumerics.m_max_iter_transport = 10;
 

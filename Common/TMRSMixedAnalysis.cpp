@@ -128,7 +128,7 @@ void TMRSMixedAnalysis::RunTimeStep(){
         std::cout << "---------Correction norm: " << corr_norm << std::endl;
         stop_criterion_Q = res_norm < res_tol;
         stop_criterion_corr_Q = corr_norm < corr_tol;
-        if (stop_criterion_Q || stop_criterion_corr_Q) {
+        if (stop_criterion_Q && stop_criterion_corr_Q) {
             std::cout << "------Iterative method converged with res_norm: " << res_norm << std::endl;
             std::cout << "------Number of iterations = " << m_k_iteration << std::endl;
             fSolution = x;

@@ -216,11 +216,11 @@ void TMRSTransportAnalysis::RunTimeStep(){
 //    }
 
     //Linear problem Benchmark
-   
-    if(Norm(Rhs()) < res_tol){
+    res_norm = Norm(Rhs());
+    if(res_norm < res_tol){
         std::cout << "Transport operator: Converged - (InitialGuess)" << std::endl;
         std::cout << "Number of iterations = " << 1 << std::endl;
-        std::cout << "residue norm = " << Norm(Rhs()) << std::endl;
+        std::cout << "residue norm = " << res_norm << std::endl;
         return;
     }
     for(m_k_iteration = 1; m_k_iteration <= n; m_k_iteration++){
