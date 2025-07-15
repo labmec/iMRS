@@ -231,6 +231,7 @@ public:
     // transfer the permeability multiplier from the transport mesh to the mixed mesh elements
     void TransferLambdaCoefficients();
     void TransferPermeabiliyTensor();
+    void TransferSaturation();
     
     // verify the correspondence of the mixed elements and the algebraic cells
     void CheckDataTransferTransportToMixed();

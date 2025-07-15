@@ -1352,7 +1352,6 @@ void TPZAlgebraicDataTransfer::InitializeTransportDataStructure(TPZAlgebraicTran
     
    // transport.fCellsData.UpdateFractionalFlowsAndLambda(true);
     this->InitializeVectorPointersTranportToMixed(transport);
-    
 }
 
 TPZAlgebraicDataTransfer::TFromMixedToTransport::TFromMixedToTransport() : fMatid(-1),
@@ -1518,6 +1517,43 @@ void TPZAlgebraicDataTransfer::TransferLambdaCoefficients()
        }
     }
 }
+
+void TPZAlgebraicDataTransfer::TransferSaturation()
+{
+    
+    for(auto &meshit : fTransportMixedCorrespondence)
+    {
+        int64_t ncells = meshit.fAlgebraicTransportCellIndex.size();
+#ifdef PZDEBUG
+        if(meshit.fTransport == 0)
+        {
+            DebugStop();
+        }
+#endif
+       for (int icell = 0; icell < ncells; icell++)
+       {
+           TPZCompEl *cel = meshit.fMixedCell[icell];
+           TPZFastCondensedElement *condensed = dynamic_cast<TPZFastCondensedElement *>(cel);
+           if (!condensed)
+           {
+               TPZCondensedCompEl *condcompel = dynamic_cast<TPZCondensedCompEl *>(cel);
+               if (condcompel)
+               {
+                   std::cout << "Element " << cel->Index() << " is not FastCondensed" << std::endl;
+                   continue;
+               }
+               else
+               {
+                   DebugStop();
+               }
+           }
+           int64_t cellindex = meshit.fAlgebraicTransportCellIndex[icell];
+           REAL sw = meshit.fTransport->fCellsData.fSaturation[cellindex];
+           condensed->SetSw(sw);
+       }
+    }
+}
+
 void TPZAlgebraicDataTransfer::TransferPermeabiliyTensor(){
     CheckDataTransferTransportToMixed();
     for(auto &meshit : fTransportMixedCorrespondence)

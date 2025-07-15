@@ -22,6 +22,9 @@ protected:
     TPZCompEl *fcelmultiphysics;
     bool fIsGroup = false;
     REAL fLambda = 1.0;
+    REAL fSw = 1.0;
+    REAL fSwLast = 1.0;
+    REAL fPressureLastState = 0.0;
     TPZFNMatrix<9, REAL> fPermeabilityTensor;
     TPZFNMatrix<9, REAL> fInvPerm;
     
@@ -164,6 +167,15 @@ public:
 
     void SetLambda(REAL lambda);
     REAL GetLambda();
+
+    void SetSw(REAL sw);
+    REAL GetSw();
+
+    void SetSwLast(REAL swlast);
+    REAL GetSwLast();
+
+    void SetPressureLastState(REAL pressurelast);
+    REAL GetPressureLastState();
     
     void SetMixedDensity(REAL density);
     void SetCompressibiilityTerm(REAL matrix, REAL rhs);

@@ -101,6 +101,7 @@ void TMRSMixedAnalysis::RunTimeStep(){
     REAL res_tol = m_sim_data->mTNumerics.m_res_tol_mixed;
     REAL corr_tol = m_sim_data->mTNumerics.m_corr_tol_mixed;
     
+    UpdateDensityAndCoefficients();
     TPZFMatrix<STATE> dx,x(Solution()),rhs;
     for(m_k_iteration = 1; m_k_iteration <= n; m_k_iteration++){
         std::cout << "------Newton iteration: " << m_k_iteration << std::endl;
@@ -110,12 +111,15 @@ void TMRSMixedAnalysis::RunTimeStep(){
         x += dx;
         cmesh->LoadSolution(x);
         fsoltransfer.TransferFromMultiphysics();
+        UpdateDensityAndCoefficients();
 
         Assemble();
         
         rhs = Rhs();
         res_norm = Norm(rhs);
         REAL normsol = Norm(Solution());
+
+        
         
 
 #ifdef PZDEBUG
@@ -128,7 +132,7 @@ void TMRSMixedAnalysis::RunTimeStep(){
         std::cout << "---------Correction norm: " << corr_norm << std::endl;
         stop_criterion_Q = res_norm < res_tol;
         stop_criterion_corr_Q = corr_norm < corr_tol;
-        if (stop_criterion_Q && stop_criterion_corr_Q) {
+        if (stop_criterion_Q || stop_criterion_corr_Q) {
             std::cout << "------Iterative method converged with res_norm: " << res_norm << std::endl;
             std::cout << "------Number of iterations = " << m_k_iteration << std::endl;
             fSolution = x;
@@ -331,4 +335,137 @@ void TMRSMixedAnalysis::VerifyElementFluxes(){
 		}
 	}
     std::cout << "\n\n===> Nice! All flux elements satisfy conservation up to tolerance " << tol << std::endl;
+}
+
+void TMRSMixedAnalysis::UpdateDensityAndCoefficients()
+{
+    
+    TPZMultiphysicsCompMesh * cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(Mesh());
+    if (!cmesh)
+        DebugStop();
+
+    auto fWaterDensityF = m_sim_data->mTFluidProperties.mWaterDensityF;
+    auto fOilDensityF = m_sim_data->mTFluidProperties.mOilDensityF;
+    int64_t nels = cmesh->NElements();
+    for (int iel = 0; iel < nels; iel++)
+    {
+        TPZCompEl *cel = cmesh->Element(iel);
+        TPZFastCondensedElement *condensed = dynamic_cast<TPZFastCondensedElement *>(cel);
+        if (!condensed) continue;
+        
+        //First we need to get the avg pressure of each cell
+        TPZCompEl *compel = condensed->ReferenceCompEl();
+        int dim = compel->Dimension();
+        TPZVec<REAL> qsi(dim, 0.0);
+        TPZVec<STATE> sol(dim, 0.0);
+        int presureindex = 2;
+        compel->Solution(qsi, presureindex, sol);
+        REAL pressure = sol[0];
+
+        //Now we update the density based on the pressure
+        std::tuple<REAL, REAL> densityWvalderiv, densityOvalderiv;
+        if (fWaterDensityF){
+            densityWvalderiv = fWaterDensityF(pressure);
+            densityOvalderiv = fOilDensityF(pressure);
+            #ifdef PZDEBUG
+            if (std::get<0>(densityWvalderiv) < 0.0 || std::get<0>(densityOvalderiv) < 0.0) {
+                // DebugStop();
+            }
+            #endif
+        }
+        else{
+            REAL waterDensity = m_sim_data->mTFluidProperties.mWaterDensityRef;
+            REAL oilDensity = m_sim_data->mTFluidProperties.mOilDensityRef;
+            densityWvalderiv = std::make_tuple(waterDensity, 0.0);
+            densityOvalderiv = std::make_tuple(oilDensity, 0.0);
+        }
+
+        REAL rhow = std::get<0>(densityWvalderiv);
+        REAL rhoo = std::get<0>(densityOvalderiv);
+
+        //With the new density we update the coefficients
+        int krModel = m_sim_data->mTPetroPhysics.mKrModel;
+        auto lambdaWfunc = m_sim_data->mTPetroPhysics.mLambdaW[krModel];
+        auto lambdaOfunc = m_sim_data->mTPetroPhysics.mLambdaO[krModel];
+        auto lambdaTotalfunc = m_sim_data->mTPetroPhysics.mLambdaTotal[krModel];
+        auto fwfunc = m_sim_data->mTPetroPhysics.mFw[krModel];
+        auto fofunc = m_sim_data->mTPetroPhysics.mFo[krModel];
+
+        REAL sw = condensed->GetSw();
+        auto fwfvalderiv = fwfunc(sw, rhow, rhoo);
+        auto fovalderiv = fofunc(sw, rhow, rhoo);
+        auto lambdaWvalderiv = lambdaWfunc(sw, rhow);
+        auto lambdaOvalderiv = lambdaOfunc(sw, rhoo);
+        auto lambdaTotalvalderiv = lambdaTotalfunc(sw, rhow, rhoo);
+
+        //Update the mixed density
+        REAL fw = std::get<0>(fwfvalderiv);
+        REAL fo = std::get<0>(fovalderiv);
+
+        REAL mixedDensity = rhow * fw + rhoo * fo;
+        condensed->SetMixedDensity(mixedDensity);
+
+        //Update the coefficients
+        REAL lambda = std::get<0>(lambdaTotalvalderiv);
+        condensed->SetLambda(lambda);
+
+        if (fWaterDensityF){
+            int matid = compel->Material()->Id();
+            REAL porosity = 0.0;
+            for (auto& domain : m_sim_data->mTReservoirProperties.mPorosityAndVolumeScale)
+            {
+                if (std::get<0>(domain) == matid) {
+                    porosity = std::get<1>(domain);
+                    break;
+                }
+            }
+            REAL dt = m_sim_data->mTNumerics.m_dt;
+            REAL so = 1 - sw;
+            REAL drhoWdp = std::get<1>(densityWvalderiv);
+            REAL drhoOdp = std::get<1>(densityOvalderiv);
+            REAL compterm = -(porosity / dt) * ((sw * drhoWdp) + (so * drhoOdp)); // negative sign in accordance with the lyx
+
+            REAL swlast = condensed->GetSwLast();
+            REAL solast = 1.0 - swlast;
+            REAL pressurelast = condensed->GetPressureLastState();
+
+            REAL rhoWlast = std::get<0>(fWaterDensityF(pressurelast));
+            REAL rhoOlast = std::get<0>(fOilDensityF(pressurelast));
+            REAL termrhscurrent = (sw * rhow) + (so * rhoo);
+            REAL termrhslast = (swlast * rhoWlast) + (solast * rhoOlast);
+            // REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast) + compterm * pressurelast;
+            REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast);
+
+            condensed->SetCompressibiilityTerm(compterm, comptermrhs);
+        }
+    }
+
+        
+}
+
+void TMRSMixedAnalysis::SetLastStateVariables()
+{
+    TPZMultiphysicsCompMesh * cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(Mesh());
+    if (!cmesh)
+        DebugStop();
+
+    int nels = cmesh->NElements();
+    for (int iel = 0; iel < nels; iel++)
+    {
+        TPZCompEl *cel = cmesh->Element(iel);
+        TPZFastCondensedElement *condensed = dynamic_cast<TPZFastCondensedElement *>(cel);
+        if (!condensed) continue;
+
+        REAL sw = condensed->GetSw();
+        condensed->SetSwLast(sw);
+
+        TPZCompEl *compel = condensed->ReferenceCompEl();
+        int dim = compel->Dimension();
+        TPZVec<REAL> qsi(dim, 0.0);
+        TPZVec<STATE> sol(dim, 0.0);
+        int presureindex = 2;
+        compel->Solution(qsi, presureindex, sol);
+        REAL pressure = sol[0];
+        condensed->SetPressureLastState(pressure);
+    }
 }

@@ -6,7 +6,7 @@
         "name": "dom",
         "dimension": 2,
         "matid": 1,
-        "K": 0.00000001, // [m^2]
+        "K": 1, // [m^2]
         "phi": 0.3
     }
     ],
@@ -33,7 +33,7 @@
             "name": "lid",
             "matid": 4,
             "type": 0, // imposed pressure
-            "value": -10000.0, // [Pa]
+            "value": -10.0, // [Pa]
             "functionID": 0,
             "ExternalSaturation": 1.0,
             "SaturationFunctionID": 0
@@ -59,12 +59,12 @@
         },
     "FluidProperties":
     {
-        "WaterDensity": 1000, //[kg/m^3]
+        "WaterDensity": 1, //[kg/m^3]
         "WaterViscosity": 0.001, // Pa.s
         "WaterCompressibility": 0.0,
-        "OilDensity": 1.225, //[kg/m^3]
-        "OilViscosity": 1.81e-5, // Pa.s
-        "OilCompressibility": 1.168e-5, // [Pa^-1]
+        "OilDensity": 0.01, //[kg/m^3]
+        "OilViscosity": 0.01, // Pa.s
+        "OilCompressibility": 1.0, // [Pa^-1]
         "DensityModel": 0, // 0: Linear, 1: Exponential
         "ReferencePressure": 0.0 // [Pa]
     },

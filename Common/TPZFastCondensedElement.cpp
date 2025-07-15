@@ -132,6 +132,24 @@ void TPZFastCondensedElement::SetLambda(REAL lambda){
 REAL TPZFastCondensedElement::GetLambda(){
     return fLambda;
 }
+void TPZFastCondensedElement::SetSw(REAL sw){
+    fSw = sw;
+}
+REAL TPZFastCondensedElement::GetSw(){
+    return fSw;
+}
+void TPZFastCondensedElement::SetSwLast(REAL swlast){
+    fSwLast = swlast;
+}
+REAL TPZFastCondensedElement::GetSwLast(){
+    return fSwLast;
+}
+void TPZFastCondensedElement::SetPressureLastState(REAL pressureLastState){
+    fPressureLastState = pressureLastState;
+}
+REAL TPZFastCondensedElement::GetPressureLastState(){
+    return fPressureLastState;
+}
 void TPZFastCondensedElement::SetMixedDensity(REAL mdensity){
     fMixedDensity = mdensity;
 }

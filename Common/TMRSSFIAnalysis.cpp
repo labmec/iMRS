@@ -46,6 +46,8 @@ TMRSSFIAnalysis::TMRSSFIAnalysis(TPZMultiphysicsCompMesh * cmesh_mixed, TPZCompM
 void TMRSSFIAnalysis::BuildAlgebraicDataStructure(){
     fAlgebraicDataTransfer.BuildTransportDataStructure(m_transport_module->fAlgebraicTransport);
     FillProperties();
+    fAlgebraicDataTransfer.TransferSaturation();
+    m_mixed_module->SetLastStateVariables();
 }
 
 TMRSSFIAnalysis::TMRSSFIAnalysis(TPZMultiphysicsCompMesh * cmesh_mixed,
@@ -362,7 +364,7 @@ void TMRSSFIAnalysis::SetDataTransferAndBuildAlgDatStruct(TMRSDataTransfer * sim
     // porosity, etc. in each element
     BuildAlgebraicDataStructure();
     
-   
+    
     m_transport_module->AnalyzePattern();
 }
 
@@ -397,12 +399,13 @@ void TMRSSFIAnalysis::RunTimeStep(){
             error_rel_transport = Norm(m_x_transport - m_transport_module->Solution())/Norm(m_transport_module->Solution());
         }
 
-        stop_criterion_Q = m_sim_data->mTNumerics.m_is_linearTrace? true : (error_rel_transport < eps_tol); // Stop by saturation variation
+        stop_criterion_Q = m_sim_data->mTNumerics.m_is_linearTrace? true : (error_rel_transport < eps_tol && error_rel_mixed < eps_tol); // Stop by saturation variation
         if (stop_criterion_Q && m_k_iteration >= 1) {
             std::cout << "SFI converged with error_rel_transport: " << error_rel_transport << " and error_rel_mixed: " << error_rel_mixed << std::endl;
             std::cout << "Number of iterations = " << m_k_iteration << std::endl;
             m_transport_module->fAlgebraicTransport.fCellsData.fSaturationLastState = m_transport_module->fAlgebraicTransport.fCellsData.fSaturation;
             m_transport_module->fAlgebraicTransport.fCellsData.UpdateDensitiesLastState(); //this should be called only once per time step
+            m_mixed_module->SetLastStateVariables();
             break;
         }
      
@@ -449,7 +452,8 @@ void TMRSSFIAnalysis::SFIIteration(){
     
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateMixedDensity();
-    fAlgebraicDataTransfer.TransferLambdaCoefficients();
+    // fAlgebraicDataTransfer.TransferLambdaCoefficients();
+    fAlgebraicDataTransfer.TransferSaturation();
 
     if(shouldSolveDarcy){
         std::cout << "---Running Darcy problem" << std::endl;

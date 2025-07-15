@@ -78,6 +78,12 @@ public:
 	
 	/// Verifies if the sum of the fluxes over all faces of an element is zero
 	void VerifyElementFluxes();
+    
+    /// Update the density and coefficients
+    void UpdateDensityAndCoefficients();
+
+    /// Update the last state variables (saturation and pressure)
+    void SetLastStateVariables();
 };
 
 #endif /* TMRSMixedAnalysis_h */
