@@ -52,7 +52,7 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.00025,
+            "DeltaT": 0.01,
             "NSteps": 1000,
             "Gravity": [0.0, 0.0, 0.0], // [m/s^2]
             "IsLinearTrace": false
@@ -64,7 +64,7 @@
         "WaterCompressibility": 0.0,
         "OilDensity": 0.01, //[kg/m^3]
         "OilViscosity": 0.01, // Pa.s
-        "OilCompressibility": 1.0, // [Pa^-1]
+        "OilCompressibility": 0.001, // [Pa^-1]
         "DensityModel": 0, // 0: Linear, 1: Exponential
         "ReferencePressure": 0.0 // [Pa]
     },

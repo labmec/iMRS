@@ -103,6 +103,16 @@ void TMRSMixedAnalysis::RunTimeStep(){
     
     UpdateDensityAndCoefficients();
     TPZFMatrix<STATE> dx,x(Solution()),rhs;
+    
+    // Assemble();
+    // rhs = Rhs();
+    // res_norm = Norm(rhs);
+    // cmesh->LoadSolution(rhs);
+    // {
+    //     std::ofstream out("MixedSolution.txt");
+    //     cmesh->Print(out);
+    // }
+    // cmesh->LoadSolution(x);
     for(m_k_iteration = 1; m_k_iteration <= n; m_k_iteration++){
         std::cout << "------Newton iteration: " << m_k_iteration << std::endl;
         NewtonIteration();
@@ -110,6 +120,10 @@ void TMRSMixedAnalysis::RunTimeStep(){
         corr_norm = Norm(dx);
         x += dx;
         cmesh->LoadSolution(x);
+        // {
+        //     std::ofstream out("MixedSolution.txt");
+        //     cmesh->Print(out);
+        // }
         fsoltransfer.TransferFromMultiphysics();
         UpdateDensityAndCoefficients();
 
@@ -139,6 +153,7 @@ void TMRSMixedAnalysis::RunTimeStep(){
             break;
         }
     }
+    // PostProcessTimeStep(2, 0);
 }
 
 
@@ -423,10 +438,11 @@ void TMRSMixedAnalysis::UpdateDensityAndCoefficients()
             REAL so = 1 - sw;
             REAL drhoWdp = std::get<1>(densityWvalderiv);
             REAL drhoOdp = std::get<1>(densityOvalderiv);
-            REAL compterm = -(porosity / dt) * ((sw * drhoWdp) + (so * drhoOdp)); // negative sign in accordance with the lyx
-
             REAL swlast = condensed->GetSwLast();
             REAL solast = 1.0 - swlast;
+            // REAL compterm = -(porosity / dt) * ((sw * drhoWdp) + (so * drhoOdp)); // negative sign in accordance with the lyx
+            REAL compterm = -(porosity / dt) * (((2.0*sw - swlast) * drhoWdp) + ((2.0*so - solast) * drhoOdp));
+
             REAL pressurelast = condensed->GetPressureLastState();
 
             REAL rhoWlast = std::get<0>(fWaterDensityF(pressurelast));
@@ -434,7 +450,8 @@ void TMRSMixedAnalysis::UpdateDensityAndCoefficients()
             REAL termrhscurrent = (sw * rhow) + (so * rhoo);
             REAL termrhslast = (swlast * rhoWlast) + (solast * rhoOlast);
             // REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast) + compterm * pressurelast;
-            REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast);
+            // REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast);
+            REAL comptermrhs = (porosity / dt) * (rhoo*(2.0*so - solast) - (so * rhoOlast) + rhow*(2.0*sw - swlast) -(sw * rhoWlast));
 
             condensed->SetCompressibiilityTerm(compterm, comptermrhs);
         }

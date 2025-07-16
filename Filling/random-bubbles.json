@@ -61,7 +61,7 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.00025,
+            "DeltaT": 0.01,
             "NSteps": 1000,
             "Gravity": [0.0, 0.0, 0.0], // [mm/s^2]
             "IsLinearTrace": false

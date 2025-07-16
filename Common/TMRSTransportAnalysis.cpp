@@ -284,7 +284,9 @@ void TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
  
     
     NewtonIteration();
-    x += Solution();
+    auto dx = Solution();
+    REAL corr_norm = Norm(dx);
+    x += dx;
     
 //    std::cout<<"SOLUTION: "<<std::endl;
 //    std::cout<<x<<std::endl;

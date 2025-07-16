@@ -453,7 +453,7 @@ void TMRSSFIAnalysis::SFIIteration(){
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     m_transport_module->fAlgebraicTransport.fCellsData.UpdateMixedDensity();
     // fAlgebraicDataTransfer.TransferLambdaCoefficients();
-    fAlgebraicDataTransfer.TransferSaturation();
+    // fAlgebraicDataTransfer.TransferSaturation();
 
     if(shouldSolveDarcy){
         std::cout << "---Running Darcy problem" << std::endl;
@@ -470,6 +470,8 @@ void TMRSSFIAnalysis::SFIIteration(){
     std::cout << "---Running Transport problem" << std::endl;
     // Solves the transport problem
     m_transport_module->RunTimeStep();
+    fAlgebraicDataTransfer.TransferSaturation();
+    m_mixed_module->SetLastStateVariables();
     
     std::cout << "SFIIteration time: " << timer_sfi.ReturnTimeDouble()/1000 << " seconds" << std::endl;
 }
