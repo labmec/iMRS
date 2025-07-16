@@ -3098,7 +3098,7 @@ void TMRSApproxSpaceGenerator::BuildMixed4SpacesMultiPhysicsCompMesh(int order){
     // ========================================================
     // Condensing elements
 	TPZReservoirTools::CondenseElements(mMixedOperator, 3, true);
-	TPZReservoirTools::PushConnectBackward(mMixedOperator, 3, 7);
+	// TPZReservoirTools::PushConnectBackward(mMixedOperator, 3, 7);
 	
 #ifdef PZDEBUG
 //    {
