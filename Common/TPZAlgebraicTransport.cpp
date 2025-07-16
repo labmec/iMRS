@@ -57,20 +57,24 @@ void TPZAlgebraicTransport::Contribute(int index, TPZFMatrix<double> &ek,TPZFMat
     
     REAL sat =fCellsData.fSaturation[index];
     REAL satLast = fCellsData.fSaturationLastState[index];
+    REAL densityWater = fCellsData.fDensityWater[index];
+    REAL densityWaterLastState = fCellsData.fDensityWaterLastState[index];
     REAL phi = fCellsData.fporosity[index];
 #ifdef PZDEBUG
     if(std::abs(phi) < 1e-12) DebugStop();
 #endif
-    ef(0) = fCellsData.fVolume[index]*phi*(sat-satLast);
-    ek(0,0) = fCellsData.fVolume[index]*phi;
+    ef(0) = fCellsData.fVolume[index]*phi*(sat*densityWater-satLast*densityWaterLastState);
+    ek(0,0) = fCellsData.fVolume[index]*phi*densityWater;
 }
 
 void TPZAlgebraicTransport::ContributeResidual(int index, TPZFMatrix<double> &ef){
     
     REAL sat =fCellsData.fSaturation[index];
     REAL satLast = fCellsData.fSaturationLastState[index];
+    REAL densityWater = fCellsData.fDensityWater[index];
+    REAL densityWaterLastState = fCellsData.fDensityWaterLastState[index];
     REAL phi = fCellsData.fporosity[index];
-    ef(0) = fCellsData.fVolume[index]*phi*(sat-satLast);
+    ef(0) = fCellsData.fVolume[index]*phi*(sat*densityWater-satLast*densityWaterLastState);
 }
 
 void TPZAlgebraicTransport::ContributeInterface(int index, TPZFMatrix<double> &ek,TPZFMatrix<double> &ef, int interfaceId){
@@ -634,15 +638,21 @@ REAL TPZAlgebraicTransport::CalculateMassById(int matId){
 void TPZAlgebraicTransport::VerifyConservation(int itime){
     int ncells = fCellsData.fVolume.size();
     REAL intMass = 0.0;
-    REAL volfrac=0.0;
+    REAL intWaterMass = 0.0;
+    REAL intOilMass = 0.0;
     
     for (int icel = 0; icel < ncells; icel++) {
-        REAL sat = fCellsData.fSaturation[icel];
+        REAL satW = fCellsData.fSaturation[icel];
+        REAL satO = 1.0 - satW; //assuming two phase flow
+        REAL rhoW = fCellsData.fDensityWater[icel];
+        REAL rhoO = fCellsData.fDensityOil[icel];
         REAL phi = fCellsData.fporosity[icel];
         REAL vol = fCellsData.fVolume[icel];
-        intMass += sat*phi*vol;
-        volfrac += vol*phi;
+        intWaterMass += satW*phi*vol*rhoW;
+        intOilMass += satO*phi*vol*rhoO;
     }
+
+    intMass = intWaterMass + intOilMass;
 
     //Separating the boundary conditions in outlet and inlet here instead of using the inlet and outlet matid defined in TMRSSFIAnalysis::FillProperties()
     std::set<int> bc_matids;
@@ -650,8 +660,10 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
         bc_matids.insert(it->first);
     }
     
-    REAL fluxIntegratedOutlet=0.0;
-    REAL fluxIntegratedInlet=0.0;
+    REAL OutletWaterMass=0.0;
+    REAL OutletOilMass=0.0;
+    REAL InletWaterMass=0.0;
+    REAL InletOilMass=0.0;
     REAL fluxIntegratedNoFlux=0.0;
     REAL zerotol = 1.e-10;
     for (auto it = bc_matids.begin(); it != bc_matids.end(); it++) {
@@ -674,54 +686,45 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
                 int krmodel = fCellsData.fsim_data->mTPetroPhysics.mKrModel;
                 // krmodel = 0; //using the inlet saturation direcly
                 auto fwf = fCellsData.fsim_data->mTPetroPhysics.mFw[krmodel];
+                auto fof = fCellsData.fsim_data->mTPetroPhysics.mFo[krmodel];
                 REAL fw_inlet = std::get<0>(fwf(s_inlet, rhoWRef, rhoORef));
-                fluxIntegratedInlet += fw_inlet*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
+                REAL fo_inlet = std::get<0>(fof(s_inlet, rhoWRef, rhoORef));
+                InletWaterMass += fw_inlet*fluxint*fdt; //before, this was multiplied by itime, which makes no sense
+                InletOilMass += fo_inlet*fluxint*fdt;
             }
             else { //outlet
                 std::pair<int64_t, int64_t> left_right = fInterfaceData[matid].fLeftRightVolIndex[i];
                 int64_t cell_id = left_right.first;
                 REAL int_saturation = fCellsData.fSaturation[cell_id];
                 REAL fwL = fCellsData.fWaterfractionalflow[cell_id];
-                fluxIntegratedOutlet += fwL*fluxint*fdt;
+                REAL foL = fCellsData.fOilfractionalflow[cell_id];
+                REAL sum = fwL + foL;
+                OutletWaterMass += fwL*fluxint*fdt;
+                OutletOilMass += foL*fluxint*fdt;
             }
         }
     }
-    
-    // int ninletInterfaces = fInterfaceData[inletmatid].fIntegralFlux.size();
-    // int nOutletInterfaces = fInterfaceData[outletmatid].fIntegralFlux.size();
-    // int nNoFluxFaces = fInterfaceData[4].fIntegralFlux.size();
 
-    // for (int iInlet=0; iInlet<ninletInterfaces; iInlet++) {
-    //      fluxIntegratedInlet += fInterfaceData[inletmatid].fIntegralFlux[iInlet]*fdt*itime;
-    // }
-    // for (int iOutlet=0; iOutlet<nOutletInterfaces; iOutlet++) {
-    //     std::pair<int64_t, int64_t> left_right = fInterfaceData[outletmatid].fLeftRightVolIndex[iOutlet];
-    //     REAL satOutlet = fCellsData.fSaturation[left_right.first];
-    //     fluxIntegratedOutlet += (satOutlet)*fInterfaceData[outletmatid].fIntegralFlux[iOutlet]*fdt;
-    // }
-    // for (int iNF=0; iNF<nNoFluxFaces; iNF++) {
-    //     std::pair<int64_t, int64_t> left_right = fInterfaceData[4].fLeftRightVolIndex[iNF];
-    //     const int indexCell = left_right.first;
-    //     REAL satNF = fCellsData.fSaturation[indexCell];
-    //     const REAL noFluxIntegral = fInterfaceData[4].fIntegralFlux[iNF];
-    //     if(fabs(noFluxIntegral) > 1.e-8){
-    //         const int indexgeoel = fCellsData.fGeoIndex[indexCell];
-    //         std::cout << "In cell " << indexCell << ", and geoel index " << indexgeoel << ", noFluxIntegral = " << noFluxIntegral << std::endl;
-    //     }
-    //     fluxIntegratedNoFlux += (satNF)*noFluxIntegral*fdt;
-    // }
+    REAL InletMass = InletWaterMass + InletOilMass;
+    REAL OutletMass = OutletWaterMass + OutletOilMass;
 
-    REAL massConservation = fluxIntegratedInlet + intMass + fluxIntegratedOutlet - initialMass;
+    REAL massConservation = intMass + InletMass + OutletMass - initialMass;
     std::cout << "\nGlobal Conservation Diagnostics" << std::endl;
-    std::cout << "---Inlet mass: " << std::setprecision(14) << fluxIntegratedInlet << std::endl;
-    std::cout << "---Outlet mass: " << fluxIntegratedOutlet << std::endl;
-    std::cout << "---Inlet - Outlet: " << fluxIntegratedInlet + fluxIntegratedOutlet << std::endl;
+    std::cout << "---Inlet water mass: " << std::setprecision(14) << InletWaterMass << std::endl;
+    std::cout << "---Inlet oil mass: " << std::setprecision(14) << InletOilMass << std::endl;
+    std::cout << "---Inlet mass: " << InletMass << std::endl;
+    std::cout << "---Outlet water mass: " << std::setprecision(14) << OutletWaterMass << std::endl;
+    std::cout << "---Outlet oil mass: " << std::setprecision(14) << OutletOilMass << std::endl;
+    std::cout << "---Outlet mass: " << OutletMass << std::endl;
+    std::cout << "---Inlet - Outlet: " << InletMass + OutletMass << std::endl;
     if(fabs(fluxIntegratedNoFlux) > 1.e-10 ){
         std::cout << "---WARNING! Flux through no flux bc is significant: " << fluxIntegratedNoFlux << std::endl;
     }
     else{
         std::cout << "---NoFlux mass: " << fluxIntegratedNoFlux << std::endl;
     }    
+    std::cout << "---System water mass: " << intWaterMass << std::endl;
+    std::cout << "---System oil mass: " << intOilMass << std::endl;
     std::cout << "---System mass: " << intMass << std::endl;
     std::cout << "---Initial mass: " << initialMass << std::endl;
     std::cout << "---System mass - Initial mass: " << intMass - initialMass << std::endl;
@@ -733,7 +736,7 @@ void TPZAlgebraicTransport::VerifyConservation(int itime){
     else{
         std::cout << "---WARNING! Global mass conservation NOT ok! Total mass loss: " << std::setprecision(14) << massConservation << std::endl;
     }
-    massOut += fluxIntegratedOutlet;
+    massOut += OutletMass;
     initialMass = intMass; //initialMass now stands for the mass at the end of the previous time step
 }
 

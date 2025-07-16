@@ -137,7 +137,7 @@ public:
     void AssembleResidual_Eigen();
     void AnalyzePattern();
     
-    void ComputeInitialGuess(TPZFMatrix<STATE> &x);
+    REAL ComputeInitialGuess(TPZFMatrix<STATE> &x);
     
     bool QuasiNewtonSteps(TPZFMatrix<STATE> &x, int n);
     

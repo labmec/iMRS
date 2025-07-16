@@ -146,7 +146,7 @@ void TMRSMixedAnalysis::RunTimeStep(){
         std::cout << "---------Correction norm: " << corr_norm << std::endl;
         stop_criterion_Q = res_norm < res_tol;
         stop_criterion_corr_Q = corr_norm < corr_tol;
-        if (stop_criterion_Q || stop_criterion_corr_Q) {
+        if (stop_criterion_Q && stop_criterion_corr_Q) {
             std::cout << "------Iterative method converged with res_norm: " << res_norm << std::endl;
             std::cout << "------Number of iterations = " << m_k_iteration << std::endl;
             fSolution = x;
@@ -370,6 +370,8 @@ void TMRSMixedAnalysis::UpdateDensityAndCoefficients()
         
         //First we need to get the avg pressure of each cell
         TPZCompEl *compel = condensed->ReferenceCompEl();
+        TPZGeoEl *gel = compel->Reference();
+        REAL vol = gel->Volume();
         int dim = compel->Dimension();
         TPZVec<REAL> qsi(dim, 0.0);
         TPZVec<STATE> sol(dim, 0.0);
@@ -440,8 +442,8 @@ void TMRSMixedAnalysis::UpdateDensityAndCoefficients()
             REAL drhoOdp = std::get<1>(densityOvalderiv);
             REAL swlast = condensed->GetSwLast();
             REAL solast = 1.0 - swlast;
-            // REAL compterm = -(porosity / dt) * ((sw * drhoWdp) + (so * drhoOdp)); // negative sign in accordance with the lyx
-            REAL compterm = -(porosity / dt) * (((2.0*sw - swlast) * drhoWdp) + ((2.0*so - solast) * drhoOdp));
+            // REAL compterm = -vol * (porosity / dt) * ((sw * drhoWdp) + (so * drhoOdp)); // negative sign in accordance with the lyx
+            REAL compterm = -vol * (porosity / dt) * (((2.0*sw - swlast) * drhoWdp) + ((2.0*so - solast) * drhoOdp));
 
             REAL pressurelast = condensed->GetPressureLastState();
 
@@ -450,8 +452,8 @@ void TMRSMixedAnalysis::UpdateDensityAndCoefficients()
             REAL termrhscurrent = (sw * rhow) + (so * rhoo);
             REAL termrhslast = (swlast * rhoWlast) + (solast * rhoOlast);
             // REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast) + compterm * pressurelast;
-            // REAL comptermrhs = (porosity / dt) * (termrhscurrent - termrhslast);
-            REAL comptermrhs = (porosity / dt) * (rhoo*(2.0*so - solast) - (so * rhoOlast) + rhow*(2.0*sw - swlast) -(sw * rhoWlast));
+            // REAL comptermrhs = vol*(porosity / dt) * (termrhscurrent - termrhslast);
+            REAL comptermrhs = vol * (porosity / dt) * (rhoo*(2.0*so - solast) - (so * rhoOlast) + rhow*(2.0*sw - swlast) -(sw * rhoWlast));
 
             condensed->SetCompressibiilityTerm(compterm, comptermrhs);
         }
@@ -475,6 +477,48 @@ void TMRSMixedAnalysis::SetLastStateVariables()
 
         REAL sw = condensed->GetSw();
         condensed->SetSwLast(sw);
+
+        TPZCompEl *compel = condensed->ReferenceCompEl();
+        int dim = compel->Dimension();
+        TPZVec<REAL> qsi(dim, 0.0);
+        TPZVec<STATE> sol(dim, 0.0);
+        int presureindex = 2;
+        compel->Solution(qsi, presureindex, sol);
+        REAL pressure = sol[0];
+        condensed->SetPressureLastState(pressure);
+    }
+}
+
+void TMRSMixedAnalysis::SetLastStateSaturation()
+{
+    TPZMultiphysicsCompMesh * cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(Mesh());
+    if (!cmesh)
+        DebugStop();
+
+    int nels = cmesh->NElements();
+    for (int iel = 0; iel < nels; iel++)
+    {
+        TPZCompEl *cel = cmesh->Element(iel);
+        TPZFastCondensedElement *condensed = dynamic_cast<TPZFastCondensedElement *>(cel);
+        if (!condensed) continue;
+
+        REAL sw = condensed->GetSw();
+        condensed->SetSwLast(sw);
+    }
+}
+
+void TMRSMixedAnalysis::SetLastStatePressure()
+{
+    TPZMultiphysicsCompMesh * cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(Mesh());
+    if (!cmesh)
+        DebugStop();
+
+    int nels = cmesh->NElements();
+    for (int iel = 0; iel < nels; iel++)
+    {
+        TPZCompEl *cel = cmesh->Element(iel);
+        TPZFastCondensedElement *condensed = dynamic_cast<TPZFastCondensedElement *>(cel);
+        if (!condensed) continue;
 
         TPZCompEl *compel = condensed->ReferenceCompEl();
         int dim = compel->Dimension();

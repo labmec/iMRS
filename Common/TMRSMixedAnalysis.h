@@ -84,6 +84,8 @@ public:
 
     /// Update the last state variables (saturation and pressure)
     void SetLastStateVariables();
+    void SetLastStateSaturation();
+    void SetLastStatePressure();
 };
 
 #endif /* TMRSMixedAnalysis_h */

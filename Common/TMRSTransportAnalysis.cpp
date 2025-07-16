@@ -209,7 +209,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
     TPZFMatrix<STATE> correction(Solution());
     correction.Zero();
     
-    ComputeInitialGuess(x); // from the linear problem (tangent and residue)
+    corr_norm = ComputeInitialGuess(x); // from the linear problem (tangent and residue)
 //    bool QN_converge_Q = QuasiNewtonSteps(x,20); // assuming linear operator (tangent)
 //    if(QN_converge_Q){
 //        return;
@@ -217,7 +217,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
 
     //Linear problem Benchmark
     res_norm = Norm(Rhs());
-    if(res_norm < res_tol){
+    if(res_norm < res_tol && corr_norm < corr_tol){
         std::cout << "Transport operator: Converged - (InitialGuess)" << std::endl;
         std::cout << "Number of iterations = " << 1 << std::endl;
         std::cout << "residue norm = " << res_norm << std::endl;
@@ -233,7 +233,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
 
         LoadSolution(x);
 //        cmesh->LoadSolutionFromMultiPhysics();
-//        PostProcessTimeStep();
+        // PostProcessTimeStep();
         fAlgebraicTransport.fCellsData.UpdateSaturations(x);
         fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     
@@ -252,7 +252,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
         std::cout << "res_norm " << res_norm << " corr_norm " << corr_norm << std::endl;
         stop_criterion_Q = (res_norm < res_tol);
         stop_criterion_corr_Q = (corr_norm < corr_tol);
-        if (stop_criterion_Q || stop_criterion_corr_Q) {
+        if (stop_criterion_Q && stop_criterion_corr_Q) {
             std::cout << "Transport operator: Converged" << std::endl;
             std::cout << "Number of iterations = " << m_k_iteration << std::endl;
             std::cout << "residue norm = " << res_norm << std::endl;
@@ -263,7 +263,7 @@ void TMRSTransportAnalysis::RunTimeStep(){
     if (!stop_criterion_Q && !stop_criterion_corr_Q) DebugStop(); //failed to converge
 }
 
-void TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
+REAL TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
     
     TPZMultiphysicsCompMesh * cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(Mesh());
     TPZCompMesh * cmesh2 = dynamic_cast<TPZCompMesh *>(Mesh());
@@ -301,8 +301,9 @@ void TMRSTransportAnalysis::ComputeInitialGuess(TPZFMatrix<STATE> &x){
     fAlgebraicTransport.fCellsData.UpdateFractionalFlowsAndLambda(m_sim_data->mTPetroPhysics.mKrModel);
     AssembleResidual();
     REAL res_norm = Norm(Rhs());
-    std::cout << "Initial guess residue norm : " <<  res_norm << std::endl;
-    
+    std::cout << "Initial guess residue norm : " <<  res_norm << ", corr_norm : " << corr_norm << std::endl;
+
+    return corr_norm;
 }
 
 bool TMRSTransportAnalysis::QuasiNewtonSteps(TPZFMatrix<STATE> &x, int n){

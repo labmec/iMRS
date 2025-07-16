@@ -1,5 +1,5 @@
 {
-    "Mesh": "random-bubbles.msh",
+    "Mesh": "three-layers.msh",
     
     "Domains": [
     {
@@ -53,7 +53,7 @@
         {
             "RunWithTransport": true,
             "DeltaT": 0.01,
-            "NSteps": 500,
+            "NSteps": 1000,
             "Gravity": [0.0, 0.0, 0.0], // [mm/s^2]
             "IsLinearTrace": false
         },
@@ -78,7 +78,7 @@
     {
         "s0":
         {
-            "functionType": 2,
+            "functionType": 1,
             "value": 0.0
         }
     }

@@ -348,7 +348,7 @@ class TMRSPropertiesFunctions
                 {
                     return [] (const TPZVec<REAL> & pt) -> REAL {
                             REAL x,y,s,r,c,f;
-                            r = 150.0; // mm
+                            r = 0.15; // mm
                             c = 0;
                             x = pt[0];
                             y = pt[1];
