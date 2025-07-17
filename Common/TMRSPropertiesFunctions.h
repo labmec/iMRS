@@ -380,50 +380,33 @@ class TMRSPropertiesFunctions
                 break;
             case ERandomCirclesFunction:
                 {
-                    // Parameters for the domain and circles
-                    const REAL inner_radius = 30.15; // mm
-                    const REAL outer_radius = inner_radius + 345.0; // mm
-                    const REAL domain_height = 1000.0; // mm
-                    const int min_circles = 50;
-                    const int max_circles = 100;
-                    const REAL max_radius = 10.0;
+                    return [](const TPZVec<REAL> &pt) -> REAL
+                    {
+                        REAL x, y, s, c, f;
+                        TPZVec<REAL> radius = {0.10, 0.05, 0.10, 0.05, 0.10}; // mm
 
-                    // Generate random circles only once
-                    static bool initialized = false;
-                    static std::vector<std::tuple<REAL, REAL, REAL>> circles; // (center_x, center_y, radius)
-                    if (!initialized) {
-                        initialized = true;
-                        std::random_device rd;
-                        std::mt19937 gen(rd());
-                        std::uniform_int_distribution<> n_dist(min_circles, max_circles);
-                        std::uniform_real_distribution<REAL> x_dist(inner_radius, outer_radius);
-                        std::uniform_real_distribution<REAL> y_dist(0.0, domain_height);
-                        std::uniform_real_distribution<REAL> r_dist(1.0, max_radius);
+                        c = 0;
+                        TPZFNMatrix<100, REAL> center(5, 2);
+                        center(0, 0) = 0.50;    center(0, 1) = 0.35;
+                        center(1, 0) = 0.15;    center(1, 1) = 0.65;
+                        center(2, 0) = 0.20;    center(2, 1) = 0.2;
+                        center(3, 0) = 0.75;    center(3, 1) = 0.3;
+                        center(4, 0) = 0.80;    center(4, 1) = 0.6;
+                        x = pt[0];
+                        y = pt[1];
 
-                        int n_circles = n_dist(gen);
-                        circles.reserve(n_circles);
-                        for (int i = 0; i < n_circles; ++i) {
-                            REAL cx = x_dist(gen);
-                            REAL cy = y_dist(gen);
-                            REAL r = r_dist(gen);
-                            circles.emplace_back(cx, cy, r);
-                        }
-                    }
-
-                    return [] (const TPZVec<REAL> & pt) -> REAL {
-                        REAL x = pt[0];
-                        REAL y = pt[1];
-                        for (const auto& circle : circles) {
-                            REAL cx = std::get<0>(circle);
-                            REAL cy = std::get<1>(circle);
-                            REAL r = std::get<2>(circle);
-                            REAL dx = x - cx;
-                            REAL dy = y - cy;
-                            if (dx*dx + dy*dy <= r*r) {
-                                return 0.0;
+                        for (int i = 0; i < center.Rows(); i++)
+                        {
+                            s = 1.0;
+                            REAL r = radius[i];
+                            f = -r * r + (x - center(i, 0)) * (x - center(i, 0)) + (y - center(i, 1)) * (y - center(i, 1)) - c;
+                            if (f <= 0.0)
+                            {
+                                s = 0.0;
+                                break; // If one circle is found, we can stop checking
                             }
                         }
-                        return 1.0;
+                        return s;
                     };
                 }
                 break;

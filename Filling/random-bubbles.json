@@ -14,8 +14,8 @@
         {
             "name": "bottom",
             "matid": 2,
-            "type": 1, // imposed flux
-            "value": 0.0,
+            "type": 0, // imposed flux
+            "value": -9.95,
             "functionID": 0,
             "ExternalSaturation": 1.0,
             "SaturationFunctionID": 0
@@ -52,8 +52,8 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.01,
-            "NSteps": 500,
+            "DeltaT": 0.03,
+            "NSteps": 2500,
             "Gravity": [0.0, 0.0, 0.0], // [mm/s^2]
             "IsLinearTrace": false
         },
@@ -70,7 +70,7 @@
     },
     "PetroPhysics":
     {
-        "KrModel": 0, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
+        "KrModel": 2, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
         "Swr": 0.2, // Residual water saturation
         "Sor": 0.2 // Residual oil saturation
     },
@@ -78,7 +78,7 @@
     {
         "s0":
         {
-            "functionType": 2,
+            "functionType": 5,
             "value": 0.0
         }
     }

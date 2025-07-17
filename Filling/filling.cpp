@@ -22,7 +22,7 @@ namespace fs = std::filesystem;
 // ----- End of namespaces -----
 
 // ----- Global vars -----
-const int glob_n_threads = 0;
+const int glob_n_threads = 8;
 
 //This parameters will be later included in the jason file
 REAL influx = 57870.37037037; //mm^3/s
@@ -62,10 +62,26 @@ auto right_pressure = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFM
   }
 };
 
+auto hydrostatic_pressure = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal)
+{
+  REAL y = coord[1]; // y is in mm
+  REAL gap_height = 100.0; // mm, gap height for hydrostatic pressure
+  REAL module_height = 1000.0; // mm, module height for hydrostatic pressure
+  if (y <= (module_height-gap_height))
+  {
+    rhsVal[0] = 0.00981 * (module_height - y);
+  }
+  else
+  {
+    rhsVal[0] = 0.0;
+  }
+};
+
 std::map<int,ForcingFunctionBCType<REAL>> forcingfunctionBC = {
     {0, nullptr},
     {1, left_pressure},
-    {2, right_pressure}
+    {2, right_pressure},
+    {3, hydrostatic_pressure}
 };
 
 // ----- Logger -----
@@ -101,7 +117,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/three-layers", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/random-bubbles", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -114,7 +130,13 @@ int main(int argc, char* argv[]) {
   aspace.SetDataTransfer(sim_data);
   aspace.SetGeometry(gmesh);
   aspace.BuildMixedMultiPhysicsCompMesh(1);
-  TPZMultiphysicsCompMesh* mp_cmesh = aspace.GetMixedOperator();  
+  TPZMultiphysicsCompMesh* mp_cmesh = aspace.GetMixedOperator();
+
+  //Somente para o enchimento do edimir
+  if(0){
+    auto cmesh = mp_cmesh->MeshVector()[3];
+    auto convec = cmesh->ConnectVec();
+  }
 
   // =========> Create Analysis
   RenumType renumtype = RenumType::EMetis;
@@ -163,9 +185,25 @@ int main(int argc, char* argv[]) {
       std::cout << "-------------------------- TIME Step " << it << " --------------------------" << std::endl;
       std::cout << "=================================================================" << std::endl;
       sim_time = it * dt;
+      
       std::cout << "Simulation time:  " << sim_time << std::endl;
       sfi_analysis->m_transport_module->SetCurrentTime(dt);
       computeWaterHeight(sfi_analysis, sim_data, sim_time);
+
+      if (it > 2000){ //changing the BC type and value for the random bubbles problem
+        auto material_map = mp_cmesh->MaterialVec();
+        TPZMaterial* bc = material_map[sim_data.mTBoundaryConditions.mDomainNameAndMatId["bottom"]];
+        TPZBndCondT<REAL>* bcond = dynamic_cast<TPZBndCondT<REAL>*>(bc);
+        if (!bcond) DebugStop();
+        bcond->SetType(1); // imposed flux
+        TPZVec<REAL> val2(3, 0.0);
+        bcond->SetVal2(val2);
+        bc = material_map[sim_data.mTBoundaryConditions.mDomainNameAndMatId["top"]];
+        bcond = dynamic_cast<TPZBndCondT<REAL>*>(bc);
+        if (!bcond) DebugStop();
+        bcond->SetVal2(val2);
+      }
+
       sfi_analysis->RunTimeStep();
       if (it == 1) {
         sfi_analysis->PostProcessTimeStep(typeToPPinit, mp_cmesh->Dimension(), it);
