@@ -22,7 +22,7 @@ namespace fs = std::filesystem;
 // ----- End of namespaces -----
 
 // ----- Global vars -----
-const int glob_n_threads = 8;
+const int glob_n_threads = 0;
 
 //This parameters will be later included in the jason file
 REAL influx = 57870.37037037; //mm^3/s
@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/random-bubbles", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/test-gravity-segregation", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -190,19 +190,19 @@ int main(int argc, char* argv[]) {
       sfi_analysis->m_transport_module->SetCurrentTime(dt);
       computeWaterHeight(sfi_analysis, sim_data, sim_time);
 
-      if (it > 2000){ //changing the BC type and value for the random bubbles problem
-        auto material_map = mp_cmesh->MaterialVec();
-        TPZMaterial* bc = material_map[sim_data.mTBoundaryConditions.mDomainNameAndMatId["bottom"]];
-        TPZBndCondT<REAL>* bcond = dynamic_cast<TPZBndCondT<REAL>*>(bc);
-        if (!bcond) DebugStop();
-        bcond->SetType(1); // imposed flux
-        TPZVec<REAL> val2(3, 0.0);
-        bcond->SetVal2(val2);
-        bc = material_map[sim_data.mTBoundaryConditions.mDomainNameAndMatId["top"]];
-        bcond = dynamic_cast<TPZBndCondT<REAL>*>(bc);
-        if (!bcond) DebugStop();
-        bcond->SetVal2(val2);
-      }
+      // if (it > 2000){ //changing the BC type and value for the random bubbles problem
+      //   auto material_map = mp_cmesh->MaterialVec();
+      //   TPZMaterial* bc = material_map[sim_data.mTBoundaryConditions.mDomainNameAndMatId["bottom"]];
+      //   TPZBndCondT<REAL>* bcond = dynamic_cast<TPZBndCondT<REAL>*>(bc);
+      //   if (!bcond) DebugStop();
+      //   bcond->SetType(1); // imposed flux
+      //   TPZVec<REAL> val2(3, 0.0);
+      //   bcond->SetVal2(val2);
+      //   bc = material_map[sim_data.mTBoundaryConditions.mDomainNameAndMatId["top"]];
+      //   bcond = dynamic_cast<TPZBndCondT<REAL>*>(bc);
+      //   if (!bcond) DebugStop();
+      //   bcond->SetVal2(val2);
+      // }
 
       sfi_analysis->RunTimeStep();
       if (it == 1) {

@@ -53,26 +53,26 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.0001,
-            "NSteps": 5000,
-            "Gravity": [0.0, -9.81, 0.0],
+            "DeltaT": 100.0,
+            "NSteps": 10000,
+            "Gravity": [0.0, -10.0, 0.0],
             "IsLinearTrace": false
         },
     "FluidProperties":
     {
-        "WaterDensity": 1000.0,
-        "WaterViscosity": 0.001,
+        "WaterDensity": 1.0,
+        "WaterViscosity": 1.0,
         "WaterCompressibility": 0,
-        "OilDensity": 1.25,
-        "OilViscosity": 0.0000183,
+        "OilDensity": 1.25e-3,
+        "OilViscosity": 0.0000183e3,
         "OilCompressibility": 0,
         "DensityModel": 0 // 0: Linear, 1: Exponential
     },
     "PetroPhysics":
     {
-        "KrModel": 2, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
-        "Swr": 0.2, // Residual water saturation
-        "Sor": 0.2 // Residual oil saturation
+        "KrModel": 1, // 0: Linear, 1: Quadratic, 2: Quadratic with residual saturation
+        "Swr": 0.0, // Residual water saturation
+        "Sor": 0.0 // Residual oil saturation
     },
     "ReservoirProperties":
     {

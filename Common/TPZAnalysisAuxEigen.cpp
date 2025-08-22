@@ -826,6 +826,12 @@ void TPZAnalysisAuxEigen::AnalyzePattern(){
 }
 
 void TPZAnalysisAuxEigen::Solve(){
+
+    Eigen::IOFormat HeavyFmt(Eigen::FullPrecision, 0, ", ", ",\n", "{", "}", "{", "}");
+    std::cout << m_rhs.toDense().format(HeavyFmt) << std::endl;
+    std::cout << m_transmissibility.toDense().format(HeavyFmt) << std::endl;
+    std::cout << m_mass.toDense().format(HeavyFmt) << std::endl;
+    
     m_transmissibility += m_mass;
     m_rhs *= -1.0;
 //    m_analysis.factorize(m_transmissibility);

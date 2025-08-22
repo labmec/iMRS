@@ -367,10 +367,10 @@ class TMRSPropertiesFunctions
                     return [] (const TPZVec<REAL> & pt) -> REAL {
                             REAL y,s;
                             y = pt[1];
-                            if(y<0.3){
-                                s = 1.0;
-                            }else if (y>=0.3 && y<0.7){
+                            if(y<5.){
                                 s = 0.0;
+                            // }else if (y>=0.3 && y<0.7){
+                            //     s = 0.0;
                             }else{
                                 s = 1.0;
                              }
