@@ -569,7 +569,7 @@ void TPZAlgebraicTransport::TCellData::UpdateDensities(){
         auto densityOvalderiv = fOilDensityF(pressure);
         #ifdef PZDEBUG
         if (std::get<0>(densityWvalderiv) < 0.0 || std::get<0>(densityOvalderiv) < 0.0) {
-            DebugStop();
+          //  DebugStop();
         }
         #endif
         fDensityWater[icell] = std::get<0>(densityWvalderiv);
@@ -880,3 +880,6 @@ void TPZAlgebraicTransport::ZeroFluxes(){
         }
     }
 }
+
+
+

@@ -101,7 +101,7 @@ public:
     
     /// Run a time step
     void RunTimeStep();
-    
+        
     /// Render a vtk file with requested variables for a time step
     void PostProcessTimeStep(const int type, const int dim = 3, int step = -1);
     
@@ -123,6 +123,8 @@ public:
     
     // transfer the permeability and lambda to the element solution for post processing
     void SetMixedMeshElementSolution(TPZCompMesh *cmesh);
+    
+    REAL GetSimTime(int iteration);
     
 };
 

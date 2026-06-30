@@ -464,6 +464,8 @@ class TMRSDataTransfer : public TMRSSavable {
      * @brief time step size
      */
     REAL m_dt;
+      
+      REAL m_istep;
 
     /**
      * @brief if true, runs the transport problems. If not, just runs the flow/pressure problem
@@ -581,6 +583,7 @@ class TMRSDataTransfer : public TMRSSavable {
       m_max_iter_sfi = 0;
       m_sfi_tol = 1.0e-3;
       m_n_steps = 0;
+      m_istep = 1;
       m_four_approx_spaces_Q = false;
       m_mhm_mixed_Q = false;
       m_is_axisymmetric = false;
@@ -612,6 +615,7 @@ class TMRSDataTransfer : public TMRSSavable {
       m_max_iter_sfi = other.m_max_iter_sfi;
       m_sfi_tol = other.m_sfi_tol;
       m_n_steps = other.m_n_steps;
+      m_istep = other.m_istep;
       m_four_approx_spaces_Q = other.m_four_approx_spaces_Q;
       m_is_axisymmetric = other.m_is_axisymmetric;
       m_is_linearTrace = other.m_is_linearTrace;
@@ -645,6 +649,7 @@ class TMRSDataTransfer : public TMRSSavable {
       m_max_iter_sfi = other.m_max_iter_sfi;
       m_sfi_tol = other.m_sfi_tol;
       m_n_steps = other.m_n_steps;
+      m_istep = other.m_istep;
       m_four_approx_spaces_Q = other.m_four_approx_spaces_Q;
       m_is_axisymmetric = other.m_is_axisymmetric;
       m_is_linearTrace = other.m_is_linearTrace;
@@ -678,6 +683,7 @@ class TMRSDataTransfer : public TMRSSavable {
              m_max_iter_sfi == other.m_max_iter_sfi &&
              m_sfi_tol == other.m_sfi_tol &&
              m_n_steps == other.m_n_steps &&
+             m_istep == other.m_istep &&
              m_four_approx_spaces_Q == other.m_four_approx_spaces_Q &&
              m_is_axisymmetric == other.m_is_axisymmetric &&
              m_is_linearTrace == other.m_is_linearTrace &&
@@ -704,6 +710,7 @@ class TMRSDataTransfer : public TMRSSavable {
       buf.Write(&m_max_iter_sfi);
       buf.Write(&m_sfi_tol);
       buf.Write(&m_n_steps);
+      buf.Write(&m_istep);
       int temp = m_four_approx_spaces_Q;
       buf.Write(&temp);
       temp = m_is_axisymmetric;
@@ -737,6 +744,7 @@ class TMRSDataTransfer : public TMRSSavable {
       buf.Read(&m_max_iter_sfi);
       buf.Read(&m_sfi_tol);
       buf.Read(&m_n_steps);
+      buf.Read(&m_istep);
       int temp;
       buf.Read(&temp);
       m_four_approx_spaces_Q = temp;
@@ -773,6 +781,7 @@ class TMRSDataTransfer : public TMRSSavable {
       std::cout << m_max_iter_transport << std::endl;
       std::cout << m_max_iter_sfi << std::endl;
       std::cout << m_n_steps << std::endl;
+      std::cout << m_istep << std::endl;
       std::cout << m_four_approx_spaces_Q << std::endl;
       std::cout << m_is_axisymmetric << std::endl;
       std::cout << m_is_linearTrace << std::endl;

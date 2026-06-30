@@ -567,7 +567,7 @@ void TPZAnalysisAuxEigen::AssembleResidual(){
 
     size_t n_nzeros_res = n_cells + (n_internal_faces * 2) + (n_internal_faces1 * 2) + (n_internal_faces2 * 2) + (n_internal_faces3 * 2) +n_inlet_faces + n_outlet_faces + n_inout_faces;
     m_rhs_triplets.resize(n_nzeros_res);
-    m_rhs.setZero();
+    m_rhs.setZero();    
     //
     
 #ifdef USING_TBB2

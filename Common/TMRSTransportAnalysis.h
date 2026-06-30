@@ -142,7 +142,38 @@ public:
     bool QuasiNewtonSteps(TPZFMatrix<STATE> &x, int n);
     
     void UpdateInitialSolutionFromCellsData();
-   
-};
+    
+    //-------------------- FUNCTIONS  --------------------
+
+    void RGK1(TPZFMatrix<STATE> &sn, TPZFMatrix<STATE> &snp1);
+    void dxdydsFinder( int problemdim, int indexcel, TPZVec<int> GeoToCellIndex, TPZStack<TPZGeoElSide> ElNeighs,TPZFMatrix< REAL> &dxdyel, TPZFMatrix< REAL> &dsel);
+    TPZStack<TPZGeoElSide> FindElNeighs(TPZGeoEl *gel, bool sameDim = true);
+    
+    TPZStack<TPZGeoElSide > FindAllElNeighs(TPZGeoEl *gel );
+    void FindElNeigsUp(TPZGeoEl *gel, TPZStack<TPZGeoElSide> &ElNeighs, TPZVec<int> &NeighsId);
+    void MaxMinMatrix(TPZCompMesh *transportMesh, TPZFMatrix<double> &result);
+    void GradientLimiter1D(TPZCompMesh *transportMesh, int xlsdim, TPZFMatrix<double>&result);
+    void GradientLimiter2D(TPZCompMesh *transportMesh, TPZFMatrix<double>&result);
+    TPZFMatrix<REAL>GetXlsEl(TPZGeoEl *gel);
+    TPZVec<double>FindMaxMin(TPZVec<int> GeoToIndex, TPZVec<int> NeighsId);
+    void GradientReconstruction1D(TPZCompMesh * transportMesh);
+    void GradientReconstruction2D(TPZCompMesh *transportMesh);
+    void UPDATERGK1(TPZFMatrix<STATE> &sn, TPZFMatrix<STATE> &snp1, TPZCompMesh *TransportMesh);
+    void FindAlphaK(double SlxsR,double SlxsL, double Skmax, double Skmin, double cellSat, double &AlphaKResult);
+    void GetCellData(TPZCompMesh *TransportMesh, TPZFMatrix<double> &Result);
+    void UpdatedGradientReconstruction1D(TPZFMatrix<double> snp1,TPZCompMesh *TransportMesh,TPZFMatrix<double> &Result);
+    void GetNeigsCentr(TPZGeoEl *gel , TPZFMatrix<REAL> &MatResult);
+    void GetNeigsSol(TPZGeoEl *gel, TPZVec<int> GeoToCellIndex,TPZVec<double> &Result);
+    TPZVec<double>GradientCell(std::vector<REAL> CenterCell, double CellSol, TPZFMatrix<REAL> CenterNeighs, TPZVec<double> NeighsSols);
+    double GradientLimiter(TPZGeoEl *gel, double cellSol, TPZVec<double> gradCell, TPZVec<double> neighsSols);
+    int IdentifyCase(TPZGeoEl *gel);
+    
+    void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol, std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> SatFunction);
+    void GetNeigsCenterAndSolTest(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol, std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> SatFunction, int istep, TPZVec<REAL> AllCellSols);
+    void GradientCell(TPZVec<REAL> &CenterCell, REAL CellSol, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol, TPZVec<REAL> &GradientSol, int dim);
+
+}; 
 
 #endif /* TMRSTransportAnalysis_h */
+
+

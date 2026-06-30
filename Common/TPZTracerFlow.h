@@ -39,6 +39,9 @@ private:
     
     REAL m_fracture_epsilon;
     
+    TPZFMatrix<REAL> m_GeoGradB;
+
+    
 public:
     
     /** @brief Default constructor */
@@ -188,6 +191,13 @@ public:
     /** @brief Get fracture cross length  */
     REAL GetFractureCrossLength(){
         return m_fracture_epsilon;
+    }
+    void SetGradB(TPZFMatrix<REAL> GeoGradB){
+        m_GeoGradB=GeoGradB;
+    }
+        
+    TPZFMatrix<REAL> GetGradB( ){
+        return m_GeoGradB;
     }
     
     REAL FractureFactor(TPZMaterialData & data);

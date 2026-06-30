@@ -109,6 +109,8 @@ int TPZTracerFlow::VariableIndex(const std::string &name) const{
 
     if (!strcmp("Sw", name.c_str())) return 0;
     if (!strcmp("So", name.c_str())) return 1;
+    if (!strcmp("int", name.c_str())) return 2;
+    if (!strcmp("GradPos", name.c_str())) return 3;
 
     return TPZMaterial::VariableIndex(name);
 }
@@ -117,8 +119,12 @@ int TPZTracerFlow::VariableIndex(const std::string &name) const{
 int TPZTracerFlow::NSolutionVariables(int var) const{
     switch(var) {
         case 0:
-            return 1; // Scalar
+            return 1; // Scalar (Revisar 6 en neopz)
         case 1:
+            return 1; // Scalar
+        case 2:
+            return 1; // Scalar
+        case 3:
             return 1; // Scalar
 
     }
@@ -137,6 +143,7 @@ void TPZTracerFlow::Solution(const TPZVec<TPZMaterialDataT<STATE>> &datavec, int
     }
     
     REAL sw = datavec[s_b].sol[0][0];
+    REAL point = 0;
 
     Solout.Resize(this->NSolutionVariables(var));
 
@@ -144,10 +151,17 @@ void TPZTracerFlow::Solution(const TPZVec<TPZMaterialDataT<STATE>> &datavec, int
         case 0:
         {
             Solout[0] = sw;
+            Solout[0] = point;
         }
             break;
         case 1:
         {
+            Solout[0] = 1.0-sw;
+        }
+            break;
+        case 2:
+        {
+            DebugStop();
             Solout[0] = 1.0-sw;
         }
             break;
@@ -409,12 +423,54 @@ void TPZTracerFlow::Solution(const TPZMaterialDataT<REAL> &data, int var,
     switch(var) {
         case 0:
         {
-            sol[0] = sw;
+//            sol[0] = sw;
+            int geoel = data.gelElId;
+            sol[0] = m_GeoGradB(geoel,2);
         }
             break;
         case 1:
         {
             sol[0] = 1.0-sw;
+        }
+            break;
+        case 2:
+        {
+            int geoel = data.gelElId;
+            auto point = data.x;
+            auto x = point[0];
+            auto y = point[1];
+            auto z = point[2];
+            sol[0] = x; //
+        }
+            break;
+        case 3:
+        {
+//-------------------------- 1D FUNC ---------------------------------------------
+            int geoel = data.gelElId;
+                   
+            auto center = data.XCenter;
+                   
+            auto centerx = m_GeoGradB(geoel,3);
+
+            auto AlphaK_m = m_GeoGradB(geoel,0);
+            REAL b = m_GeoGradB(geoel,1);
+            auto sk = m_GeoGradB(geoel,2);
+            auto point = data.x[0];
+            sol[0] = ((point-centerx)*AlphaK_m) + sk;
+//-------------------------- END --------------------------------------------
+//            auto sk=m_GeoGradB(geoel,0);
+//            auto alphaK_gradx=m_GeoGradB(geoel,1);
+//            auto alphaK_grady=m_GeoGradB(geoel,2);
+//            REAL xcenter=m_GeoGradB(geoel,3);
+//            REAL ycenter=m_GeoGradB(geoel,4);
+//
+//            auto xpoint= data.x[0];
+//            auto ypoint= data.x[1];
+//
+//            auto xterm= alphaK_gradx*(xpoint-xcenter);
+//            auto yterm= alphaK_grady*(ypoint-ycenter);
+//            sol[0]= sk+xterm+yterm;
+
         }
             break;
     }

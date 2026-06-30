@@ -38,6 +38,10 @@ TMRSSFIAnalysis::TMRSSFIAnalysis(TPZMultiphysicsCompMesh * cmesh_mixed, TPZCompM
                                  const RenumType& renumtype){
     m_mixed_module = new TMRSMixedAnalysis(cmesh_mixed,renumtype);
     m_transport_module = new TMRSTransportAnalysis(cmesh_transport,renumtype);
+    
+    auto transformLA = dynamic_cast< TPZLinearAnalysis *>(m_transport_module);
+
+    
     fAlgebraicDataTransfer.SetMeshes(*cmesh_mixed, *cmesh_transport);
     
     
@@ -424,6 +428,7 @@ void TMRSSFIAnalysis::RunTimeStep(){
     
 }
 
+
 void TMRSSFIAnalysis::PostProcessTimeStep(const int type, const int dim, int step){
 
     std::cout << "\nTMRSSFIAnalysis Post Process" << std::endl;
@@ -465,7 +470,7 @@ void TMRSSFIAnalysis::SFIIteration(){
     
     std::cout << "---Running Transport problem" << std::endl;
     // Solves the transport problem
-    //m_transport_module->RunTimeStep();
+    m_transport_module->RunTimeStep();
     
     std::cout << "SFIIteration time: " << timer_sfi.ReturnTimeDouble()/1000 << " seconds" << std::endl;
 }
@@ -712,3 +717,14 @@ void TMRSSFIAnalysis::ReadProperties(std::string name, bool print_table_Q, std::
     }
     file.close();
 }
+
+
+// ---------- TEST FUNCTION ----------
+REAL TMRSSFIAnalysis::GetSimTime(int iteration){
+    REAL dt = m_sim_data->mTNumerics.m_dt;
+    REAL sim_time = dt*iteration;
+    return sim_time;
+}
+
+
+// ---------- TEST FUNCTION ----------

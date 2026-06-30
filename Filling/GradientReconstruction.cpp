@@ -16,6 +16,9 @@
 #include "pzsmanal.h"
 #include "TMRSPropertiesFunctions.h"
 #include "Material/Projection/TPZL2Projection.h"
+#include "TPZNullMaterial.h"
+#include "Material/Projection/TPZL2ProjectionCS.h"
+
 
 // ----- Namespaces -----
 using namespace std;
@@ -38,7 +41,7 @@ void RunProblem(TPZGeoMesh *gmesh, const ExactSolFunc &exsol, TPZVec<REAL> &AllC
 
 void FillDataTransfer(std::string filename, TMRSDataTransfer &simdata);
 void GradientCell(TPZVec<REAL> &CenterCell, REAL CellSol, TPZVec<std::pair<TPZVec<REAL>, REAL>> &CenterAndSol, TPZVec<REAL> &GradientSol, int dim);
-REAL GradientLimiter(TPZGeoEl *gel, REAL cellSol, TPZVec<REAL> &gradCell, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol);
+REAL GradientLimiter(TPZGeoEl *gel, REAL cellSol, TPZVec<REAL> &gradCell, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol,  bool SmoothLimiter);
 TPZCompMesh *CreateCMesh(TPZGeoMesh *gmesh, const ExactSolFunc &ExactSolution);
 
 void ComputeGradients(TPZGeoMesh *gmesh, TPZVec<REAL> &AllCellSols, TPZFMatrix<REAL> &Gradients);
@@ -46,26 +49,149 @@ void ComputeGradients(TPZGeoMesh *gmesh, TPZVec<REAL> &AllCellSols, TPZFMatrix<R
 void ComputeGradients(TPZCompMesh *cmesh);
 void EvaluateError(TPZGeoMesh *gmesh,
                    std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> solution,TPZVec<REAL>& error);
+TPZMultiphysicsCompMesh *CreateMultiphysicsMesh( TPZGeoMesh *gmesh, TPZManVector<TPZCompMesh*,2> MeshVec,std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> ExactSolution);
+TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> ExactSolution);
+
+void GhostCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol, std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> ExactSolution);
+
+
 // Definition of the left and right boundary conditions
-auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal) -> void
-{
-  REAL x = coord[0];
-  REAL y = coord[1];
-  REAL z = coord[2];
+//auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal) -> void
+//{
+//  REAL x = coord[0];
+//  REAL y = coord[1];
+//  REAL z = coord[2];
+//
+//    rhsVal[0] = cos(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
+//    matVal.Resize(3, 1);
+//    matVal(0, 0) =  -0.5 * M_PI * sin(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
+//    matVal(1, 0) = -0.5 * M_PI * cos(M_PI * 0.5 * x) * sin(M_PI * 0.5 * y);
+//    matVal(2, 0) = 0.0;
+//};
+
+
+//auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal) -> void
+//{
+//    REAL x = coord[0];
+//    REAL y = coord[1];
+//
+//    // f(x, y) = sin(x + y) + cos(x * y)
+//    rhsVal[0] = std::sin(x + y) + std::cos(x * y);
+//
+//    matVal.Resize(3, 1);
+//
+//    matVal(0, 0) = std::cos(x + y) - y * std::sin(x * y);
+//
+//    matVal(1, 0) = std::cos(x + y) - x * std::sin(x * y);
+//
+//    matVal(2, 0) = 0.0;
+//};
+
+//auto solution = [](const TPZVec<REAL> &coord,
+//                   TPZVec<STATE> &rhsVal,
+//                   TPZFMatrix<STATE> &matVal) -> void
+//{
+//    REAL x = coord[0];
+//    REAL y = coord[1];
+//
+//    const REAL c = 0.59;
+//    const REAL mu = 1e-8;
+//    const REAL term_sqrt = sqrt(c * mu * x);
+//
+//    const REAL expo = exp(-y / term_sqrt);
+//
+//    rhsVal[0] = 1.0 - expo;
+//
+//    matVal.Resize(3, 1);
+//
+//    REAL dudy = (1.0 / term_sqrt) * expo;
+//    REAL dudx = -expo * (y * c * mu) / (2.0 * pow(term_sqrt, 3));
+//
+//    matVal(0, 0) = dudx;
+//    matVal(1, 0) = dudy;
+//    matVal(2, 0) = 0.0;
+//};
+
 
 //  rhsVal[0] = std::exp(-(x * x + y * y));
 //  matVal.Resize(3, 1);
 //  matVal(0, 0) = -2.0 * x * std::exp(-(x * x + y * y));
 //  matVal(1, 0) = -2.0 * y * std::exp(-(x * x + y * y));
 //  matVal(2, 0) = 0.0;
-    rhsVal[0] = cos(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
-    matVal.Resize(3, 1);
-    matVal(0, 0) =  -0.5 * M_PI * sin(M_PI * 0.5 * x) * cos(M_PI * 0.5 * y);
-    matVal(1, 0) = -0.5 * M_PI * cos(M_PI * 0.5 * x) * sin(M_PI * 0.5 * y);
-    matVal(2, 0) = 0.0;
-    
-  int stop = 2;
+//
+   
+
+//    rhsVal[0] =exp(-(8*x*x)/(M_PI*M_PI));
+//    matVal.Resize(3, 1);
+//    matVal(0, 0) = rhsVal[0] * (-16.0 * x) / (M_PI * M_PI);
+//    matVal(1, 0) = 0.0;
+//    matVal(2, 0) = 0.0;
+
+
+
+
+
+
+auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal) -> void
+{
+    REAL x = coord[0];
+    REAL y = coord[1];
+    REAL z = coord[2];
+
+    REAL A = (1.0 - x*x);
+    REAL B = (1.0 - y*y);
+    REAL C = (M_PI/2.0 - atan(100.0*(x*x + y*y - 0.25)));
+
+    rhsVal[0] = 0.4 * A * B * C;
+
+    REAL dA_dx = -2.0 * x;
+    REAL dB_dy = -2.0 * y;
+
+    REAL denom = 1.0 + pow(100.0*(x*x + y*y - 0.25), 2);
+
+    REAL dC_dx = - (200.0 * x) / denom;
+    REAL dC_dy = - (200.0 * y) / denom;
+
+    matVal.Resize(3,1);
+
+    matVal(0,0) = 0.4 * (dA_dx * B * C + A * B * dC_dx);
+    matVal(1,0) = 0.4 * (A * dB_dy * C + A * B * dC_dy);
+    matVal(2,0) = 0.0;
 };
+
+//auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal) -> void
+//{
+//    REAL x = coord[0];
+//    REAL y = coord[1];
+//    REAL z = coord[2];
+//
+//    rhsVal[0] = x+y;
+//
+//    matVal.Resize(3,1);
+//
+//    matVal(0,0) = 1.0;
+//    matVal(1,0) = 1.0;
+//    matVal(2,0) = 0.0;
+//};
+
+//
+//auto solution = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal) -> void
+//{
+//    REAL x = coord[0];
+//    REAL y = coord[1];
+//
+//    rhsVal[0] = std::pow(1.0 - x, 2) + 100.0 * std::pow(y - std::pow(x, 2), 2);
+//
+//    matVal.Resize(3, 1);
+//
+//    matVal(0, 0) = -2.0 * (1.0 - x) - 400.0 * x * (y - std::pow(x, 2));
+//
+//    matVal(1, 0) = 200.0 * (y - std::pow(x, 2));
+//
+//    matVal(2, 0) = 0.0;
+//};
+
+
 // ----- Logger -----
 #ifdef PZ_LOG
 static TPZLogger mainlogger("imrs");
@@ -104,20 +230,8 @@ int main(int argc, char *argv[])
   //  Print gmesh to vtk
   std::ofstream out("gmesh_up.vtk");
   TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+    
 
-    int ngels = gmesh->NElements();
-    int dim = gmesh->Dimension();
-    for (int i = 0; i<ngels; i++) {
-        TPZGeoEl *gel = gmesh->Element(i);
-
-        if (gel->Dimension()==dim) {
-            TPZVec<TPZGeoEl *> child;
-            gel->Divide(child);
-            break;
-        }
-    }
-    std::ofstream outE("gmesh_edit.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, outE);
 
     
 //  auto cmesh = CreateCMesh(gmesh, solution);
@@ -135,55 +249,69 @@ int main(int argc, char *argv[])
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m);
     EvaluateError(gmesh, solution, error_m_1);
     
-//////  Refine
+//Refine
 //    TPZCheckGeom geom(gmesh);
-//    geom.UniformRefine(1);
+//    geom.UniformRefine(8);
 //    ofstream out_m1("gmesh_refined_1.vtk");
 //    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m1);
+//    TPZVec<REAL> error_m_11;
+//    EvaluateError(gmesh, solution, error_m_11);
+    
+//    TPZCheckGeom geom2(gmesh);
+//    geom2.UniformRefine(1);
+//    ofstream out_m2("gmesh_refined_2.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m2);
 //    TPZVec<REAL> error_m_2;
 //    EvaluateError(gmesh, solution, error_m_2);
 //
-//    TPZCheckGeom geom1(gmesh);
-//    geom1.UniformRefine(1);
-//    ofstream out_m2("gmesh_refined_2.vtk");
-//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m2);
-//    TPZVec<REAL> error_m_3;
-//    EvaluateError(gmesh, solution, error_m_3);
-//
-//    TPZCheckGeom geom2(gmesh);
-//    geom2.UniformRefine(1);
+//    TPZCheckGeom geom3(gmesh);
+//    geom3.UniformRefine(1);
 //    ofstream out_m3("gmesh_refined_3.vtk");
 //    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m3);
+//    TPZVec<REAL> error_m_3;
+//    EvaluateError(gmesh, solution, error_m_3);
+    
+//    TPZCheckGeom geom4(gmesh);
+//    geom4.UniformRefine(1);
+//    ofstream out_m4("gmesh_refined_4.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m4);
 //    TPZVec<REAL> error_m_4;
 //    EvaluateError(gmesh, solution, error_m_4);
 //
-//    TPZCheckGeom geom3(gmesh);
-//    geom3.UniformRefine(1);
-//    ofstream out_m4("gmesh_refined_4.vtk");
-//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m4);
+//    TPZCheckGeom geom5(gmesh);
+//    geom5.UniformRefine(1);
+//    ofstream out_m5("gmesh_refined_5.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m5);
 //    TPZVec<REAL> error_m_5;
 //    EvaluateError(gmesh, solution, error_m_5);
 //
-//    TPZCheckGeom geom4(gmesh);
-//    geom4.UniformRefine(1);
-//    ofstream out_m5("gmesh_refined_5.vtk");
-//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m5);
+//    TPZCheckGeom geom6(gmesh);
+//    geom6.UniformRefine(1);
+//    ofstream out_m6("gmesh_refined_6.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m6);
 //    TPZVec<REAL> error_m_6;
 //    EvaluateError(gmesh, solution, error_m_6);
+    
+    
+    
 //
-//    TPZCheckGeom geom5(gmesh);
-//    geom5.UniformRefine(1);
-//    ofstream out_m6("gmesh_refined_5.vtk");
-//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out_m6);
-//    TPZVec<REAL> error_m_7;
-//    EvaluateError(gmesh, solution, error_m_7);
+//    Create H1 CMesh
+//    TPZCompMesh* H1CMesh= CreateH1CMesh(gmesh, solution);
 //
-//    ofstream errortxtF3("errorf3.txt");
-//    errortxtF3<<error_m_1[0]<< " " <<error_m_2[0]<<" "<<error_m_3[0]<<" "<<error_m_4[0]<<" "<<error_m_5[0]<<" "<<" "<<error_m_4[0]<<" "<<error_m_5[0]<<" ";
-//    errortxtF3.close();
-//    ofstream GRerrortxtF3("GRerrorf3.txt");
-//    GRerrortxtF3<<error_m_1[1]<< " " <<error_m_2[1]<<" "<<error_m_3[1]<<" "<<error_m_4[1]<<" "<<error_m_5[1]<<" "<<" "<<error_m_4[1]<<" "<<error_m_5[1]<<" ";
-//    GRerrortxtF3.close();
+//
+////    Create L2 CMesh
+//    TPZCompMesh* L2CMesh= CreateCMesh(gmesh, solution);
+////    Create MultiPhysicMesh
+//    TPZManVector<TPZCompMesh *, 2> MeshVec(2);
+//    MeshVec[0]= L2CMesh;
+//    MeshVec[1]= H1CMesh;
+//
+//    auto m_cmesh= CreateMultiphysicsMesh(gmesh,MeshVec, solution);
+    
+    
+
+    
+
    
     
     
@@ -488,8 +616,8 @@ std:
 
 void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol) {
   int dim = gel->Mesh()->Dimension();
-    std::cout<<"************ TEST NEIGHS ************"<<std::endl;
-    cout<<"index geometric element = "<<gel->Index()<<endl;
+//    std::cout<<"************ TEST NEIGHS ************"<<std::endl;
+//    cout<<"index geometric element = "<<gel->Index()<<endl;
   TPZCompEl *cel = gel->Reference();
   if(!cel) DebugStop();
   TPZCompMesh *cmesh = cel->Mesh();
@@ -502,6 +630,14 @@ void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>
     TPZGeoElSide gelside(gel, side);
     TPZStack<TPZCompElSide> celstack;
     gelside.EqualorHigherCompElementList3(celstack, 0, 0);
+      TPZStack<TPZCompElSide> upcelstack;
+      for (int i=0; i<celstack.size(); i++) {
+          if (celstack[i].Element()!=cel) {
+              upcelstack.Push(celstack[i]);
+          }
+      }
+      celstack=upcelstack;
+      
     int ncel = celstack.size();
     if(ncel == 0) {
       TPZCompElSide celside = gelside.LowerLevelCompElementList2(0);
@@ -530,13 +666,54 @@ void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>
       int64_t pos = block.Position(seqnum);
       int nshape = connect.NShape();
       REAL cellSol = sol(pos+nshape-1,0);
-        std::cout<<"idNeg= "<<gel->Index()<<" SkNeig= "<<cellSol<<" CenterN= "<<centerNeigh[0]<<" "<<centerNeigh[1]<<endl;
-        
+
       CenterAndSol.push_back(std::make_pair(centerNeigh, cellSol));
     }
   }
 }
+void GhostCenterAndSol(TPZGeoEl *gel, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol, std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> ExactSolution) {
+    // GHOST EDIT
+    
+    int geoIndex = gel->Index();
+    int nnodes = gel->NNodes();
+    int nsides = gel->NSides();
+    int geldim = gel->Dimension();
+    
+    TPZVec<STATE> ghostCenter(3,0.); //Adjust 3D problem
+    TPZVec<REAL> diff(3,0);
+    TPZStack<TPZGeoElSide> ElNeighs;
+    for (int iside = nnodes; iside < nsides; iside++) {
+        TPZGeoElSide gelside(gel,iside);
+        int neigh = gelside.NNeighbours(geldim-1);
+        if (neigh != 0) {
+//            cout<<"******************************"<<std::endl;
+        
+            TPZVec<REAL> EdgeCenter(3);
+            gelside.CenterX(EdgeCenter);
+            TPZVec<REAL> cellCenter(3);
+            TPZGeoElSide cell (gel, nsides);
+            cell.CenterX(cellCenter);
+            diff[0] = EdgeCenter[0] - cellCenter[0];
+            diff[1] = EdgeCenter[1] - cellCenter[1];
+            
+            ghostCenter[0] = EdgeCenter[0] + diff[0];
+            ghostCenter[1] = EdgeCenter[1] + diff[1];
 
+            TPZVec<STATE> rhsVal(1);
+            TPZFMatrix<STATE> matVal;
+            solution( ghostCenter, rhsVal, matVal);
+//            cout<< "************* id cell = "<< geoIndex<<std::endl;
+//               cout<< "xEdge= "<< EdgeCenter[0]<< "  xCell= "<< cellCenter[0]<<"  ghost= "<< ghostCenter[0]<< endl;
+//            cout<< "yEdge= "<< EdgeCenter[1]<< "  yCell= "<< cellCenter[1]<<"  ghost= "<< ghostCenter[1]<< endl;
+            auto ghostSol = rhsVal[0];
+            CenterAndSol.push_back(std::make_pair(ghostCenter, ghostSol));
+            int stop = 1;
+
+        }
+    }
+    
+    // GHOST END
+}
 
 void GetNeigsCenterAndSol(TPZGeoEl *gel, TPZVec<REAL> AllCellSols, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol)
 {
@@ -653,107 +830,140 @@ void GradientCell(TPZVec<REAL> &CenterCell, REAL CellSol, TPZStack<std::pair<TPZ
   }
 }
 
-REAL GradientLimiter(TPZGeoEl *gel, REAL cellSol, TPZVec<REAL> &gradCell, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol)
+REAL GradientLimiter(TPZGeoEl *gel, REAL cellSol, TPZVec<REAL> &gradCell, TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> &CenterAndSol, bool SmoothLimiter)
 {
+    int nnodes = gel->NNodes();
+    int nsides = gel->NSides();
+    int geldim = gel->Dimension();
+      
+  //=========== EDIT GABRIEL ===========
+  //Set Alpha equals to 1.0 to the boundary cells
+      REAL alphaK = -10;
+//      int geoIndex = gel->Index();
+//      TPZVec<int> NeighsIds;
+//      TPZStack<TPZGeoElSide> ElNeighs;
+//      for (int iside = nnodes; iside < nsides; iside++) {
+//          TPZGeoElSide gelside(gel,iside);
+//          int neigh = gelside.NNeighbours(geldim-1);
+//          if (neigh != 0) {
+//              alphaK = 1.0;
+//              break;
+//          }
+//      }
+    alphaK = 99;
+    
+      if (alphaK != 1.0) {
+          double tolerance = 0.0000001;
+          int nneighs = CenterAndSol.size();
+          TPZVec<REAL> neighsSols(nneighs);
 
-  int nnodes = gel->NNodes();
-  int nsides = gel->NSides();
-  int geldim = gel->Dimension();
-  double tolerance = 0.0000001;
-  int nneighs = CenterAndSol.size();
-  TPZVec<REAL> neighsSols(nneighs);
+          for (int ineigh = 0; ineigh < nneighs; ineigh++)
+          {
+            auto pair = CenterAndSol[ineigh];
+            REAL NeighSol = pair.second;
+            neighsSols[ineigh] = NeighSol;
+          }
 
-  for (int ineigh = 0; ineigh < nneighs; ineigh++)
-  {
-    auto pair = CenterAndSol[ineigh];
-    REAL NeighSol = pair.second;
-    neighsSols[ineigh] = NeighSol;
-  }
+          TPZFMatrix<REAL> allElNodes(nnodes, 2); // consider mesh 2D
+          TPZVec<double> allSlxl(nnodes);
 
-  TPZFMatrix<REAL> allElNodes(nnodes, 2); // consider mesh 2D
-  TPZVec<double> allSlxl(nnodes);
+          TPZGeoElSide gelside(gel, nsides); // find the centroid of the element
+          TPZVec<REAL> Xcenter(3);
+          gelside.CenterX(Xcenter);
+          REAL xcenter = Xcenter[0];
+          REAL ycenter = Xcenter[1];
+          REAL zcenter = Xcenter[2];
 
-  TPZGeoElSide gelside(gel, nsides); // find the centroid of the element
-  TPZVec<REAL> Xcenter(3);
-  gelside.CenterX(Xcenter);
-  REAL xcenter = Xcenter[0];
-  REAL ycenter = Xcenter[1];
-  REAL zcenter = Xcenter[2];
+          for (int i = 0; i < nnodes; i++)
+          { // compute the solution at the vertices
+            TPZGeoNode *inode = gel->NodePtr(i);
+            REAL xcoord = inode->Coord(0);
+            REAL ycoord = inode->Coord(1);
+            REAL zcoord = inode->Coord(2);
+            if (geldim == 2)
+            {
+              allSlxl[i] = cellSol + ((gradCell[0] * (xcoord - xcenter)) + (gradCell[1] * (ycoord - ycenter)));
+            }
+            if (geldim == 3)
+            {
+              allSlxl[i] = cellSol + ((gradCell[0] * (xcoord - xcenter)) + (gradCell[1] * (ycoord - ycenter)) + (gradCell[2] * (zcoord - zcenter))); // Verify
+            }
+          }
 
-  for (int i = 0; i < nnodes; i++)
-  { // compute the solution at the vertices
-    TPZGeoNode *inode = gel->NodePtr(i);
-    REAL xcoord = inode->Coord(0);
-    REAL ycoord = inode->Coord(1);
-    REAL zcoord = inode->Coord(2);
-    if (geldim == 2)
-    {
-      allSlxl[i] = cellSol + ((gradCell[0] * (xcoord - xcenter)) + (gradCell[1] * (ycoord - ycenter)));
-    }
-    if (geldim == 3)
-    {
-      allSlxl[i] = cellSol + ((gradCell[0] * (xcoord - xcenter)) + (gradCell[1] * (ycoord - ycenter)) + (gradCell[2] * (zcoord - zcenter))); // Verify
-    }
-  }
+          // get max and min
+          neighsSols.push_back(cellSol); // Add cellSol to allneighsSol
+          REAL maxSat = neighsSols[0];
+          REAL minSat = neighsSols[0];
 
-  // get max and min
-  neighsSols.push_back(cellSol); // Add cellSol to allneighsSol
-  REAL maxSat = neighsSols[0];
-  REAL minSat = neighsSols[0];
+          for (int j = 0; j < neighsSols.size(); j++)
+          {
+            REAL satNeigh = neighsSols[j];
+            if (satNeigh > maxSat)
+            {
+              maxSat = satNeigh;
+            }
+            if (satNeigh < minSat)
+            {
+              minSat = satNeigh;
+            }
+          }
 
-  for (int j = 0; j < neighsSols.size(); j++)
-  {
-    REAL satNeigh = neighsSols[j];
-    if (satNeigh > maxSat)
-    {
-      maxSat = satNeigh;
-    }
-    if (satNeigh < minSat)
-    {
-      minSat = satNeigh;
-    }
-  }
+              TPZVec<REAL> allYs;
+          REAL yval;
 
-	  TPZVec<REAL> allYs;
-  REAL yval;
+          for (int i = 0; i < nnodes; i++)
+          {
+            auto slxlVal = allSlxl[i];
+            REAL checkval = std::abs(slxlVal - cellSol);
 
-  for (int i = 0; i < nnodes; i++)
-  {
-    auto slxlVal = allSlxl[i];
-    REAL checkval = std::abs(slxlVal - cellSol);
+            if (checkval < tolerance)
+            {
+              yval = 1.0;
+            }
+            else
+            {
+              if (slxlVal > cellSol)
+              {
+                yval = (maxSat - cellSol) / (slxlVal - cellSol);
+              }
+              if (slxlVal < cellSol)
+              {
+                yval = (minSat - cellSol) / (slxlVal - cellSol);
+              }
+            }
+              REAL ybar = -11;
+              if (SmoothLimiter) {
+                  ybar = ((yval * yval) + 2 * yval) / ((yval * yval) + yval + 2);
+              } else {
+                  if (yval>1.0) {
+                      ybar=1.0;
+                  } else{
+                      ybar=yval;
+                  }
+              }
+            
+            allYs.push_back(ybar);
+          }
 
-    if (checkval < tolerance)
-    {
-      yval = 1.0;
-    }
-    else
-    {
-      if (slxlVal > cellSol)
-      {
-        yval = (maxSat - cellSol) / (slxlVal - cellSol);
+          int nyvals = allYs.size();
+
+          // find limiter val AlphaK
+          alphaK = allYs[0];
+          for (int j = 0; j < nyvals; j++)
+          {
+            REAL alphaKVal = allYs[j];
+            if (alphaKVal < alphaK)
+            {
+              alphaK = alphaKVal;
+            }
+          }
       }
-      if (slxlVal < cellSol)
-      {
-        yval = (minSat - cellSol) / (slxlVal - cellSol);
-      }
-    }
-    REAL ybar = ((yval * yval) + 2 * yval) / ((yval * yval) + yval + 2);
-    allYs.push_back(ybar);
-  }
+      
+      
+  //    =========== END ===========
 
-  int nyvals = allYs.size();
-
-  // find limiter val AlphaK
-  REAL alphaK = allYs[0];
-  for (int j = 0; j < nyvals; j++)
-  {
-    REAL alphaKVal = allYs[j];
-    if (alphaKVal < alphaK)
-    {
-      alphaK = alphaKVal;
-    }
-  }
-  return alphaK;
+    return alphaK;
+ 
 }
 
 void RunProblem(TPZGeoMesh *gmesh, const ExactSolFunc &sol, TPZVec<REAL> &AllCelAverage)
@@ -764,6 +974,7 @@ void RunProblem(TPZGeoMesh *gmesh, const ExactSolFunc &sol, TPZVec<REAL> &AllCel
 
   for (int igel = 0; igel < ngels; igel++)
   {
+      
     TPZGeoEl *gel = gmesh->Element(igel);
     int eldim = gel->Dimension();
     if (eldim == meshdim)
@@ -780,6 +991,7 @@ void RunProblem(TPZGeoMesh *gmesh, const ExactSolFunc &sol, TPZVec<REAL> &AllCel
     }
   }
 }
+
 
 TPZCompMesh *CreateCMesh(TPZGeoMesh *gmesh, const ExactSolFunc &ExactSolution)
 {
@@ -827,19 +1039,23 @@ TPZCompMesh *CreateCMesh(TPZGeoMesh *gmesh, const ExactSolFunc &ExactSolution)
   RunProblem(gmesh, ExactSolution, AllCelAverage);
   {
     int64_t ncel = cmesh->NElements();
+    
     TPZBlock &block = cmesh->Block();
     TPZFMatrix<REAL> &sol = cmesh->Solution();
-      std::cout<<"Sk Solutions"<<std::endl;
+//      std::cout<<"Sk Solutions"<<std::endl;
 
     for (int64_t i = 0; i < ncel; i++)
     {
+        if (i % 1000 == 0) {
+            cout<<" iel = "<<i<<endl;
+        }
       TPZCompEl *cel = cmesh->Element(i);
       if (cel)
       {
         TPZGeoEl *gel = cel->Reference();
         int gelindex = gel->Index();
         REAL cellSol = AllCelAverage[gelindex];
-          std::cout<<" idcell= "<<gelindex<<"  cellSol= "<<cellSol<<endl;
+//          std::cout<<" idcell= "<<gelindex<<"  cellSol= "<<cellSol<<endl;
 
         int ncon = cel->NConnects();
         if(ncon != 1)
@@ -873,6 +1089,7 @@ STATE CellAverage(TPZCompElDisc *disc) {
   int64_t seqnum = cel->Connect(0).SequenceNumber();
   TPZBlock &block = cel->Mesh()->Block();
   TPZFMatrix<REAL> &sol = cel->Mesh()->Solution();
+//    sol.Print(std::cout);
   int pos = block.Position(seqnum);
   int blsize = block.Size(seqnum);
   REAL cellSol = sol(pos + blsize - 1, 0);
@@ -886,13 +1103,14 @@ void ComputeGradients(TPZCompMesh *cmesh) {
   TPZFMatrix<REAL> &sol = cmesh->Solution();
   for (int64_t i = 0; i < ncels; i++)
   {
+      if (i % 1000 == 0) {
+          cout<<" iel = "<<i<<endl;
+      }
     TPZCompEl *cel = cmesh->Element(i);
     if (!cel) {
       continue;
     }
     TPZGeoEl *gel = cel->Reference();
-      cout<<"********************************************"<<endl;
-      std::cout<<"idgel= "<<gel->Index()<<endl;
     int geldim = gel->Dimension();
     if (geldim != mdim) {
       continue;
@@ -908,13 +1126,13 @@ void ComputeGradients(TPZCompMesh *cmesh) {
     gelside.CenterX(centerCell);
     TPZStack<std::pair<TPZManVector<REAL,3>, REAL>> CenterAndSol;
     GetNeigsCenterAndSol(gel, CenterAndSol);
+    GhostCenterAndSol(gel,CenterAndSol,solution);
     TPZVec<REAL> GradientSol;
     GradientCell(centerCell, CellSol, CenterAndSol, GradientSol, mdim);
-    
-    cout<<"gradx= "<<GradientSol[0]<<"  grady= "<<GradientSol[1]<<endl;
-    REAL AlphaK = GradientLimiter(gel, CellSol, GradientSol, CenterAndSol);
-    cout<<"AlphaK= "<<AlphaK<<endl;
-      
+   REAL AlphaK = GradientLimiter(gel, CellSol, GradientSol, CenterAndSol, false);
+
+//    EDIT GABRIEL
+//   REAL AlphaK = 1.0;
     TPZConnect &con = cel->Connect(0);
     int64_t seqnum = con.SequenceNumber();
     int blsize = block.Size(seqnum);
@@ -922,11 +1140,8 @@ void ComputeGradients(TPZCompMesh *cmesh) {
       DebugStop();
     }
         int64_t pos = block.Position(seqnum);
-    sol(pos,0) = GradientSol[0];
-    sol(pos+1,0) = GradientSol[1];
-
-//
-//    std::cout << "gelId = " << i << "  AlphaK= " << AlphaK << "   Gradient= " << GradientSol[0] << "  " << GradientSol[1] << std::endl;
+    sol(pos,0) = AlphaK*GradientSol[0];
+    sol(pos+1,0) = AlphaK*GradientSol[1];
   }
   TPZStack<std::string> fields;
   fields.Push("Solution");
@@ -956,7 +1171,8 @@ void ComputeGradients(TPZGeoMesh *gmesh, TPZVec<REAL> &AllCellSols, TPZFMatrix<R
       GetNeigsCenterAndSol(gel, AllCellSols, CenterAndSol);
       TPZVec<REAL> GradientSol;
       GradientCell(centerCell, CellSol, CenterAndSol, GradientSol, mdim);
-      REAL AlphaK = GradientLimiter(gel, CellSol, GradientSol, CenterAndSol);
+      int LimiterType = 1;
+      REAL AlphaK = GradientLimiter(gel, CellSol, GradientSol, CenterAndSol,  LimiterType);
 
       std::cout << "gelId = " << i << "  AlphaK= " << AlphaK << "   Gradient= " << GradientSol[0] << "  " << GradientSol[1] << std::endl;
       int stop = 1;
@@ -968,6 +1184,7 @@ void ComputeGradients(TPZGeoMesh *gmesh, TPZVec<REAL> &AllCellSols, TPZFMatrix<R
 void EvaluateError(TPZGeoMesh *gmesh,
                            std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> solution,TPZVec<REAL>& error)
 {
+    cout<<" ********** Creating Cellwise Approximation *************"<<endl;
     TPZCompMesh *cmesh =CreateCMesh(gmesh, solution);
    
     TPZManVector<REAL, 3> errorsum(3, 0.);
@@ -976,6 +1193,7 @@ void EvaluateError(TPZGeoMesh *gmesh,
    
     REAL errorL2 = errorsum[1];
     
+    cout<<" ************** Creating GR approximation ********"<<endl;
     ComputeGradients(cmesh);
     errorsum.Fill(0.);
     cmesh->EvaluateError(true, errorsum);
@@ -985,8 +1203,69 @@ void EvaluateError(TPZGeoMesh *gmesh,
     error[0]=errorL2;
     error[1]=errorReconstL2;
     cout<<"error L2= "<<errorL2<<"  error reconstru L2= "<<errorReconstL2<<endl;
- 
+}
+
+TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> ExactSolution) {
+    TPZCompMesh* cmesh = new TPZCompMesh(gmesh);
+    const int dim = gmesh->Dimension();
+    cmesh->SetDimModel(dim);
+    cmesh->SetDefaultOrder(1);
+    cmesh->SetAllCreateFunctionsContinuous();
     
+    // Domain elas mat
+    int matid = 1;
+    TPZL2Projection<STATE> *mat = new TPZL2Projection(matid, dim, 1);
+
+    mat->SetExactSol(ExactSolution, 2);
+
+    cmesh->InsertMaterialObject(mat);
+
+    
+    // Constructs mesh
+    cmesh->AutoBuild();
+    
+    TPZStack<std::string>fields;
+    fields.Push("Solution");
+    TPZVTKGenerator vtk(cmesh, fields, "Exact_cmesh.vtk" , 0, gmesh->Dimension());
+//    {
+//        std::ofstream file("Exact_sol.vtk");
+//        TPZVTKGeoMesh::PrintCMeshVTK(cmesh, file);
+//    }
+    
+
+    return cmesh;
+}
+
+TPZMultiphysicsCompMesh *CreateMultiphysicsMesh( TPZGeoMesh *gmesh, TPZManVector<TPZCompMesh*,2> MeshVec,std::function<void(const TPZVec<REAL> &, TPZVec<STATE> &, TPZFMatrix<STATE> &)> ExactSolution)
+{
+    TPZMultiphysicsCompMesh *cmesh_m = new TPZMultiphysicsCompMesh(gmesh);
+
+    cmesh_m->SetName("CMesh_M");
+
+    cmesh_m->SetDefaultOrder(1);
+    cmesh_m->SetAllCreateFunctionsMultiphysicElem();
+    
+    
+
+    // Creating Materials
+    int matid = 1;
+    int dim = gmesh->Dimension();
+    TPZL2ProjectionCS<STATE> *mat = new TPZL2ProjectionCS(matid, dim, 1);
+
+    mat->SetExactSol(ExactSolution, 2);
+
+    cmesh_m->InsertMaterialObject(mat);
+
+    
+    TPZManVector<int, 2> active_approx_spaces(2, 1);
+    
+
+    cmesh_m->BuildMultiphysicsSpace(active_approx_spaces, MeshVec);
+    cmesh_m->AdjustBoundaryElements();
+    cmesh_m->CleanUpUnconnectedNodes();
+    cmesh_m->LoadReferences();
+
+    return cmesh_m;
 }
 
   // ---------------------------------------------------------------------

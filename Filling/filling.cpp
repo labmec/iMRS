@@ -34,6 +34,8 @@ TPZGeoMesh* ReadMeshFromGmsh(TMRSDataTransfer& sim_data);
 void FillDataTransfer(std::string filenameBase, TMRSDataTransfer& sim_data);
 void SetCompressibilityAndGravity(TMRSDataTransfer& sim_data, TMRSMixedAnalysis* mixAnalisys);
 void computeWaterHeight(TMRSSFIAnalysis* sfi_analysis, TMRSDataTransfer& sim_data, REAL time);
+void SatFictitiousElements(TPZCompMesh* transport_operator, REAL sim_time);
+
 
 // Definition of the left and right boundary conditions
 auto left_pressure = [](const TPZVec<REAL> &coord, TPZVec<STATE> &rhsVal, TPZFMatrix<STATE> &matVal)
@@ -101,7 +103,7 @@ int main(int argc, char* argv[]) {
   sim_data.mTNumerics.m_mhm_mixed_Q = false;
   sim_data.mTNumerics.m_need_merge_meshes_Q = false;
   sim_data.mTNumerics.m_SpaceType = TMRSDataTransfer::TNumerics::E4Space;
-  FillDataTransfer(basemeshpath + "/../Filling/test-1d-vacuum", sim_data);
+  FillDataTransfer(basemeshpath + "/../Filling/Gradient_Test", sim_data);
 
   // =========> Create GeoMesh
   TPZGeoMesh* gmesh = ReadMeshFromGmsh(sim_data);
@@ -114,7 +116,7 @@ int main(int argc, char* argv[]) {
   aspace.SetDataTransfer(sim_data);
   aspace.SetGeometry(gmesh);
   aspace.BuildMixedMultiPhysicsCompMesh(1);
-  TPZMultiphysicsCompMesh* mp_cmesh = aspace.GetMixedOperator();  
+  TPZMultiphysicsCompMesh* mp_cmesh = aspace.GetMixedOperator();
 
   // =========> Create Analysis
   RenumType renumtype = RenumType::EMetis;
@@ -131,7 +133,7 @@ int main(int argc, char* argv[]) {
     TPZCompMesh* transport_operator = aspace.GetTransportOperator();
     TMRSSFIAnalysis* sfi_analysis = new TMRSSFIAnalysis(mp_cmesh, transport_operator, renumtype);
     sfi_analysis->SetDataTransferAndBuildAlgDatStruct(&sim_data);
-    sfi_analysis->Configure(glob_n_threads, UsePardiso_Q, UsingPzSparse);    
+    sfi_analysis->Configure(glob_n_threads, UsePardiso_Q, UsingPzSparse);
     const int n_steps = sim_data.mTNumerics.m_n_steps;
     const REAL dt = sim_data.mTNumerics.m_dt;
 
@@ -154,7 +156,7 @@ int main(int argc, char* argv[]) {
 
     TPZFastCondensedElement::fSkipLoadSolution = false;
     const int typeToPPinit = 0;   // 0: both, 1: p/flux, 2: saturation
-    const int typeToPPsteps = 0;  // 0: both, 1: p/flux, 2: saturation
+    const int typeToPPsteps = 2;  // 0: both, 1: p/flux, 2: saturation
 
     // Looping over time steps
     for (int it = 1; it <= n_steps; it++) {
@@ -165,10 +167,43 @@ int main(int argc, char* argv[]) {
       std::cout << "Simulation time:  " << sim_time << std::endl;
       sfi_analysis->m_transport_module->SetCurrentTime(dt);
       computeWaterHeight(sfi_analysis, sim_data, sim_time);
+      sim_data.mTNumerics.m_istep = it;
       sfi_analysis->RunTimeStep();
+      SatFictitiousElements(transport_operator, sim_time);
+
+        if (sim_data.mTNumerics.m_UseGradRec) {
+            sfi_analysis->m_transport_module->GradientReconstruction1D(transport_operator);
+        }
+
+//        // Test InterpolationSpace
+////        int nelstrans= transport_operator->NElements();
+////        for (int iel =0; iel < nelstrans; iel++) {
+////            TPZCompEl *cel = transport_operator->Element(iel);
+////            if(!cel){
+////                continue;
+////            };
+////            if (cel->Dimension() != 2) {
+////                continue;
+////            }
+////            TPZInterpolationSpace *intel = dynamic_cast<TPZInterpolationSpace *>(cel);
+////            TPZVec<REAL> qsi(2);
+////            int var = 0;
+////            TPZVec<STATE> sol(6,0.0);
+////            intel->Solution(qsi, var, sol );
+////            int ok =0;
+////        }
+
+
+        //
       if (it == 1) {
+          transport_operator->SetDefaultOrder(0);
+
+          transport_operator->ExpandSolution();
+          transport_operator->CleanUpUnconnectedNodes();
         sfi_analysis->PostProcessTimeStep(typeToPPinit, mp_cmesh->Dimension(), it);
       }
+
+
       mp_cmesh->LoadSolution(mp_cmesh->Solution());
 
       // Only post process based on reporting times
@@ -185,6 +220,10 @@ int main(int argc, char* argv[]) {
       }
       sfi_analysis->m_transport_module->fAlgebraicTransport.VerifyConservation(it);
     }
+      
+      //Modificar las saturaciones
+      
+      
 
   }
   else {
@@ -310,6 +349,8 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
     auto numerics = input["Numerics"];
     sim_data.mTNumerics.m_run_with_transport = numerics["RunWithTransport"];
     if (sim_data.mTNumerics.m_run_with_transport) {
+      sim_data.mTNumerics.m_UseGradRec =numerics["UseGradientRec"];
+      sim_data.mTNumerics.m_TransportSolMethod =numerics["SolverTransportMethod"];
       if (numerics.find("DeltaT") == numerics.end()) DebugStop();
       sim_data.mTNumerics.m_dt = numerics["DeltaT"];
       if (numerics.find("NSteps") == numerics.end()) DebugStop();
@@ -420,6 +461,10 @@ void FillDataTransfer(string filenameBase, TMRSDataTransfer& sim_data) {
   }
   scalnamesTransport.Push("Sw");
   scalnamesTransport.Push("So");
+    
+  if(sim_data.mTNumerics.m_UseGradRec){
+      scalnamesTransport.Push("GradPos");
+  }
 
   sim_data.mTPostProcess.m_vecnamesDarcy = vecnames;
   sim_data.mTPostProcess.m_scalnamesDarcy = scalnames;
@@ -475,6 +520,17 @@ void computeWaterHeight(TMRSSFIAnalysis* sfi_analysis, TMRSDataTransfer& sim_dat
     }
   }
   water_height = (influx - total_inlet_flux) * time / (M_PI * tube_radius * tube_radius); //water_height, influx and tube_radius are global variables (HORRIBLE!)
+}
+
+void SatFictitiousElements(TPZCompMesh* transport_operator, REAL sim_time){
+    int nels = transport_operator->NElements();
+    auto gmesh = transport_operator->Reference();
+    int geonels = gmesh->NElements();
+    
+    for (int gnel= 0; gnel<geonels; gnel++) {
+        
+    }
+    
 }
 
 // ---------------------------------------------------------------------

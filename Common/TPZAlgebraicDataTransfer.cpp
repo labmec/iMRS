@@ -1291,6 +1291,8 @@ void TPZAlgebraicDataTransfer::InitializeTransportDataStructure(TPZAlgebraicTran
         int indexgeo=gel->Index();
         int geldim = gel->Dimension();
         int matId = gel->MaterialId();
+        int nsides = gel->NSides(geldim-1);
+        transport.fCellsData.fSaturationEdges[i].resize(nsides);
         
         REAL volume = gel->Volume();
         if (transport.fCellsData.fsim_data->mTNumerics.m_is_axisymmetric)

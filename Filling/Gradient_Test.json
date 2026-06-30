@@ -1,5 +1,5 @@
 {
-    "Mesh": "Mesh_ref_1.msh",
+    "Mesh": "Mesh_1D.msh",
     
     "Domains": [
     {
@@ -45,22 +45,22 @@
     "Numerics":
         {
             "RunWithTransport": true,
-            "DeltaT": 0.00266667,//
+            "DeltaT": 0.00117188,//0.025
             "NSteps": 2, //40
             "Gravity": [0.0, -0.00001, 0.0],
             "IsLinearTrace": true,
             "IsAxisymmetric": false,
             "UseGradientRec": true,
-            "SolverTransportMethod": 3
+            "SolverTransportMethod": 1
         },
     "FluidProperties":
     {
-        "WaterDensity": 1.0e-6,
+        "WaterDensity":1.0,// 1.0e-6,
         "WaterViscosity": 1.0,
-        "WaterCompressibility": 4.4e-10,
-        "OilDensity": 1.225e-9,
+        "WaterCompressibility": 0.0,
+        "OilDensity": 1.0,//1.225e-9,
         "OilViscosity": 1.0,
-        "OilCompressibility": 4.4e-10,
+        "OilCompressibility": 0.0,
         "DensityModel": 0 // 0: Linear, 1: Exponential
     },
     "PetroPhysics":
